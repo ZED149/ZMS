@@ -6,3 +6,4 @@
 
 # this file will run automarically when included in other files
 
+from .media_manager import *
