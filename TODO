@@ -1,0 +1,3 @@
+complete add_tv_shows_to_db
+complete create_tv_shows_table_in_db
+make a unit test for all functions
