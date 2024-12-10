@@ -22,3 +22,5 @@ if __name__ == "__main__":
     # adding all movies to the db
     o.amtd("media_manager/movies/", MOVIES_DB)
     
+    # adding tv_shows to the db
+    o.atstd("media_manager/tv_shows/", "")

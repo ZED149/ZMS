@@ -45,19 +45,19 @@ CREATE TABLE "movies" (
         
 
     # amtd (add movies to database)
-    def amtd(self, path: str, db_name: str = "media.db"):
+    def amtd(self, path: str, db_name: str = "movies.db"):
         """Read movie media from the given path and add them to the database.
-        If none db name is passed, media.db is created.
-        movie name should follow this pattern:
-        1. It should be inside a directory
+        If none db name is passed, media.db is created.\n
+        Movie name should follow this pattern:
+        1. It should be inside a directory.
         2. Directory name should be e.g if the name of the movie is pulp fiction
-        then, directory name should be Pupl Fiction (year) [quality] ===> Pulp Fiction (1994) [4k]
+        then, directory name should be Pupl Fiction (year) [quality] ===> Pulp Fiction (1994) [4k].
 
         NOTE: If the pattern is not followed, then the code behaviour can lead to unexpected results, including corrupted database.
 
         Args:
             path (str): path to read media from
-            db_name (str): name of the database file
+            db_name (str): name of the database file. Defaults to "movies.db".
         """
 
         # connecting to database
@@ -71,13 +71,35 @@ CREATE TABLE "movies" (
             release_year = altered_name.split(" (")[1]
             release_year = release_year.replace(")", "")
             # now that we have our movie_name and year in a proper format, we can insert into db
-            cursor.execute("""INSERT INTO "movies"
+            db_query = """INSERT INTO "movies"
                            (name, release_year)
                            VALUES(?,?);
-""",(movie_name, release_year))
+"""
+            data_tuple = (movie_name, release_year)
+            try:
+                cursor.execute(db_query,data_tuple)
+            except sqlite3.IntegrityError:
+                raise NameError(f"movie({movie_name}) already present in the {db_name}.")
             
             # commiting changes to db
             conn.commit()
             # closing connection to the db
             conn.close()
 
+
+    # atstd (add_tv_shows_to_database)
+    def atstd(self, path: str, db_name: str = "tv_shows.db"):
+        """iterate on path and add all tv_shows to the given db.
+
+        Args:
+            path (str): path to iterate on.
+            db_name (str, optional): Name of the database. Defaults to "tv_shows.db".
+        """
+
+        # connecting to the database
+        conn = sqlite3.connect(db_name)
+        cursor = conn.cursor()
+
+        # iterating on path and adding tv_shows to db
+        for tv_show in glob.glob(path + "*"):
+            print(tv_show)
