@@ -17,7 +17,8 @@ if __name__ == "__main__":
     o = MediaManager()
     
     # creating movies table in the db
-    o.cmtid(MOVIES_DB)
+    # o.cmtid(MOVIES_DB)
 
     # adding all movies to the db
+    o.amtd("media_manager/movies/", MOVIES_DB)
     
