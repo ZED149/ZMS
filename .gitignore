@@ -4,3 +4,5 @@ media_manager/.env
 media_manager/__pycache__/media_manager.cpython-312.pyc
 test.py
 media_manager/movies.db
+media_manager/tv_shows
+media_manager/movies
