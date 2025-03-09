@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path="media_manager/.env")
 
 # GLOBAL
-MOVIES_DB = os.getenv('MOVIES_DB')
+DB_NAME = os.getenv('DB_NAME')
 
 # MAIN
 if __name__ == "__main__":
@@ -17,10 +17,13 @@ if __name__ == "__main__":
     o = MediaManager()
     
     # creating movies table in the db
-    # o.cmtid(MOVIES_DB)
+    # o.cmtid(DB_NAME)
 
     # adding all movies to the db
-    o.amtd("media_manager/movies/", MOVIES_DB)
+    o.amtd("media_manager/movies/", DB_NAME)
+
+    # creating tv_shows table in the db
+    # o.ctstid(DB_NAME)
     
     # adding tv_shows to the db
-    o.atstd("media_manager/tv_shows/", "")
+    o.atstd("media_manager/tv_shows/", DB_NAME)
