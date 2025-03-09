@@ -17,13 +17,18 @@ if __name__ == "__main__":
     o = MediaManager()
     
     # creating movies table in the db
-    # o.cmtid(DB_NAME)
+    o.cmtid(DB_NAME)
 
     # adding all movies to the db
     o.amtd("media_manager/movies/", DB_NAME)
 
     # creating tv_shows table in the db
-    # o.ctstid(DB_NAME)
+    o.ctstid(DB_NAME)
     
     # adding tv_shows to the db
     o.atstd("media_manager/tv_shows/", DB_NAME)
+
+    # creating emails table in the db
+    o.cetid(DB_NAME)
+
+    

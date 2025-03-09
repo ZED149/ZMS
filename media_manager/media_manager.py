@@ -212,3 +212,49 @@ CREATE TABLE "movies" (
 
         conn.commit()
         conn.close()    
+
+
+    # cetid(create_email_table_in_database)
+    def cetid(self, db_name: str = None):
+        """Creates Emails table in the given db.
+        Args:
+            db_name (str, optional): _description_. Defaults to None. Name of the DB in which "emails" table to be initialized
+        """
+
+        if db_name:
+            # connecting to the DB
+            conn = sqlite3.connect(db_name)
+            cursor = conn.cursor()
+
+            # writing query
+            query = """CREATE TABLE "emails" (
+        "email"	TEXT NOT NULL UNIQUE,
+        "full_name"	TEXT NOT NULL,
+        "id"	INTEGER NOT NULL UNIQUE,
+        PRIMARY KEY("id" AUTOINCREMENT)
+    );
+    """
+            # executing query
+            try:
+                cursor.execute(query)
+            except sqlite3.OperationalError:
+                print("NOTE: table 'emails' already exists in DB.")
+                # closing connection
+                conn.close()
+                return 
+            # if query is executed sucessfully
+            # closing connection to the DB
+            conn.close()
+        else:
+            raise TypeError("db_name cannot be none.")
+
+
+
+    # se (send_email)
+    def se(self):
+        pass
+
+
+    # ce (create_email)
+    def ce(self):
+        pass
