@@ -270,8 +270,8 @@ CREATE TABLE "movies" (
             df = pd.read_excel(file)
             full_names = df['full name'].to_list()
             emails = df['emails'].to_list()
-            print(full_names)
-            print(emails)
+            # print(full_names)
+            # print(emails)
 
             # generating query
             query = """INSERT INTO "emails"
@@ -281,7 +281,10 @@ CREATE TABLE "movies" (
             data = [(a, b) for a , b in zip(full_names, emails)]
             for d in data:
                 data_tuple = d
-                cursor.execute(query, data_tuple)
+                try:
+                    cursor.execute(query, data_tuple)
+                except sqlite3.IntegrityError:
+                    print(f"NOTE: email \"{d[1]}\" already exists in the DB.")
             # data_tuple = (full_names, emails)
             # cursor.execute(query, data_tuple)
             conn.commit()
