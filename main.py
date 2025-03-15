@@ -31,4 +31,5 @@ if __name__ == "__main__":
     # creating emails table in the db
     o.cetid(DB_NAME)
 
-    
+    # adding emails to the DB
+    o.aetd(file="emails.xlsx", db_name=DB_NAME)

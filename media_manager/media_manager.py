@@ -247,7 +247,45 @@ CREATE TABLE "movies" (
             conn.close()
         else:
             raise TypeError("db_name cannot be none.")
+        
+    
+    # aetd (add_emails_to_database)
+    def aetd(self, file: str = None, db_name: str = None):
+        """Add emails to the db_name. If either of file or db_name is None, the program quits.
 
+        Args:
+            file (str, optional): _description_. Defaults to None. Name of the file from which emails to be extracted from,
+            can be of .xlsx or .csv. Must includes only two headers in the columns. These are... email, full_name
+            db_name (str, optional): _description_. Defaults to None. Name of the database in which emails to be inserted.
+        """
+
+        if file is None or db_name is None:
+            raise TypeError("db_name or file cannot be none.")
+        else:
+            # connecting to the db
+            conn = sqlite3.connect(db_name)
+            cursor = conn.cursor()
+
+            import pandas as pd
+            df = pd.read_excel(file)
+            full_names = df['full name'].to_list()
+            emails = df['emails'].to_list()
+            print(full_names)
+            print(emails)
+
+            # generating query
+            query = """INSERT INTO "emails"
+            (full_name, email)
+            VALUES (?, ?);
+"""
+            data = [(a, b) for a , b in zip(full_names, emails)]
+            for d in data:
+                data_tuple = d
+                cursor.execute(query, data_tuple)
+            # data_tuple = (full_names, emails)
+            # cursor.execute(query, data_tuple)
+            conn.commit()
+            conn.close()
 
 
     # se (send_email)
