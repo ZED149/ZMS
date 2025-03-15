@@ -6,3 +6,4 @@ test.py
 media_manager/movies.db
 media_manager/tv_shows
 media_manager/movies
+emails.xlsx
