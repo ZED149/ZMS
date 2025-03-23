@@ -12,6 +12,10 @@ class MediaManager:
     """Used in handling media related items.
     """
 
+    # data members
+    WARNING = "WARNING: "
+    ERROR = "ERROR: "
+
     # private data mambers
     # constructor
     def MediaManager(self):
@@ -41,7 +45,7 @@ CREATE TABLE "movies" (
 );
                            """)
             except sqlite3.OperationalError:
-                print("Table 'moveis' already exists in DB.")
+                print(f"{self.ERROR}Table 'moveis' already exists in DB.")
                 # print("Exiting Program...")
                 conn.close()
                 return
@@ -99,9 +103,9 @@ CREATE TABLE "movies" (
         conn.close()
         # print to screen if already present movies are not added in the DB
         if len(already_added_movies) > 0:
-            print("NOTE: Already added movies were not committed to the DB.")
-            print("Movies includes...")
-            print(already_added_movies)
+            print(f"{self.WARNING}Already added movies were not committed to the DB.")
+            print(f"Movies includes...\n{already_added_movies}")
+            # print(already_added_movies)
 
 
     # ctvtid (create_tv_shows_table_in_database)
@@ -135,7 +139,7 @@ CREATE TABLE "movies" (
             try:
                 cursor.execute(query_1)
             except sqlite3.OperationalError:
-                print("Table 'episodes' already exists in DB.")
+                print(f"{self.ERROR}Table 'episodes' already exists in DB.")
                 # print("Exiting Program...")
                 conn.close()
                 return
@@ -144,7 +148,7 @@ CREATE TABLE "movies" (
             try:
                 cursor.execute(query_2)
             except sqlite3.OperationalError:
-                print("Table 'tv_shows' already exists in DB.")
+                print(f"{self.ERROR}Table 'tv_shows' already exists in DB.")
                 # print("Exiting Program...")
                 conn.close()
                 return
@@ -182,7 +186,7 @@ CREATE TABLE "movies" (
                     # inserting tv_show name into the DB
                     conn.execute(query, data_tuple)
                 except sqlite3.IntegrityError:
-                    print(f"NOTE: Tv Show --> {folder} already present in DB.")
+                    print(f"{self.WARNING}Tv Show --> {folder} already present in DB.")
                     continue
             
             for file in files:      # file is the episode for that tv_show
@@ -207,7 +211,7 @@ CREATE TABLE "movies" (
                 try:
                     conn.execute(query, data_tuple)
                 except sqlite3.IntegrityError:
-                    print(f"NOTE: Episode {file} is already present in the {tv_show_dir_name}.")
+                    print(f"{self.WARNING}Episode {file} is already present in the {tv_show_dir_name}.")
                     continue
 
         conn.commit()
@@ -238,7 +242,7 @@ CREATE TABLE "movies" (
             try:
                 cursor.execute(query)
             except sqlite3.OperationalError:
-                print("NOTE: table 'emails' already exists in DB.")
+                print(f"{self.ERROR}table 'emails' already exists in DB.")
                 # closing connection
                 conn.close()
                 return 
@@ -284,7 +288,7 @@ CREATE TABLE "movies" (
                 try:
                     cursor.execute(query, data_tuple)
                 except sqlite3.IntegrityError:
-                    print(f"NOTE: email \"{d[1]}\" already exists in the DB.")
+                    print(f"{self.WARNING}email \"{d[1]}\" already exists in the DB.")
             # data_tuple = (full_names, emails)
             # cursor.execute(query, data_tuple)
             conn.commit()
@@ -297,5 +301,20 @@ CREATE TABLE "movies" (
 
 
     # ce (create_email)
-    def ce(self):
-        pass
+    def ce(self, db_name: str) -> None:
+        # fetch all movies from DB
+        conn = sqlite3.connect(db_name)
+        cursor = conn.cursor()
+
+        # fetching all movies names from DB
+        query = """
+SELECT name FROM movies
+"""
+        cursor.execute(query)
+        list_of_movie_names = cursor.fetchall()
+        list_of_movie_names = [m_movie[0] for m_movie in list_of_movie_names]
+
+        # Now, fetching all tv shows from the DB
+
+
+        conn.close()
