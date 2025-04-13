@@ -18,8 +18,10 @@ if __name__ == "__main__":
     # Instanciating MediaManager
     o = MediaManager(db_name=DB_NAME)
 
+    # setting sending email and commiting to DB flag = False
     flag = False
     
+    # perform this only if flag is True
     if flag:
         # creating movies table in the db
         o.cmtid(DB_NAME)
@@ -39,8 +41,8 @@ if __name__ == "__main__":
         # adding emails to the DB
         o.aetd(file="emails.xlsx", db_name=DB_NAME)
 
-    # Now need to create and then send emails
 
+    # Now need to create and then send emails
     movies = []
     tv_shows = {}
     # crawling the directory for new movies
@@ -51,9 +53,7 @@ if __name__ == "__main__":
     print("TV Shows: ")
     print(tv_shows)
     # creating emails
-    
     o.MESSAGE = o.ce(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
-    # print(message)
     flag = o.se(message=o.MESSAGE)
     if flag:
         o.commit()
