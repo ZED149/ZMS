@@ -14,22 +14,50 @@ DB_NAME = os.getenv('DB_NAME')
 # MAIN
 if __name__ == "__main__":
     print("Working")
-    o = MediaManager()
+
+    # Instanciating MediaManager
+    o = MediaManager(db_name=DB_NAME)
+
+    flag = False
     
-    # creating movies table in the db
-    o.cmtid(DB_NAME)
+    if flag:
+        # creating movies table in the db
+        o.cmtid(DB_NAME)
 
-    # adding all movies to the db
-    o.amtd("media_manager/movies/", DB_NAME)
+        # adding all movies to the db
+        o.amtd("media_manager/movies/", DB_NAME)
 
-    # creating tv_shows table in the db
-    o.ctstid(DB_NAME)
+        # creating tv_shows table in the db
+        o.ctstid(DB_NAME)
+        
+        # adding tv_shows to the db
+        o.atstd("media_manager/tv_shows/", DB_NAME)
+
+        # creating emails table in the db
+        o.cetid(DB_NAME)
+
+        # adding emails to the DB
+        o.aetd(file="emails.xlsx", db_name=DB_NAME)
+
+    # Now need to create and then send emails
+
+    movies = []
+    tv_shows = {}
+    # crawling the directory for new movies
+    movies = o.amtd("media_manager/not_uploaded/movies/", db_name=DB_NAME)
+    tv_shows = o.atstd("media_manager/not_uploaded/tv_shows/", db_name=DB_NAME)
+    print("Movies: ")
+    print(movies)
+    print("TV Shows: ")
+    print(tv_shows)
+    # creating emails
     
-    # adding tv_shows to the db
-    o.atstd("media_manager/tv_shows/", DB_NAME)
+    o.MESSAGE = o.ce(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
+    # print(message)
+    flag = o.se(message=o.MESSAGE)
+    if flag:
+        o.commit()
+    else:
+        print("email not send and not committed to the DB.")
 
-    # creating emails table in the db
-    o.cetid(DB_NAME)
 
-    # adding emails to the DB
-    o.aetd(file="emails.xlsx", db_name=DB_NAME)
