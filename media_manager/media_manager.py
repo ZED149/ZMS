@@ -402,13 +402,13 @@ CREATE TABLE "movies" (
     # ce (create_email)
     def ce(self, db_name: str = None, movies_list: list = None, tv_shows: dict = None) -> str:
         # Validations
-        movies_list = ["Interstellar", "John Wick 2", "Iron Man", "The Day After Tomorrow"]
-        tv_shows = {
-            "Parizaad": [],
-            "BOL": [],
-            "Meem Se Muhabbat": [],
-            "Zindagi Gulzar Hai": []
-        }
+        # movies_list = ["Interstellar", "John Wick 2", "Iron Man", "The Day After Tomorrow"]
+        # tv_shows = {
+        #     "Parizaad": [],
+        #     "BOL": [],
+        #     "Meem Se Muhabbat": [],
+        #     "Zindagi Gulzar Hai": []
+        # }
         if not movies_list and not tv_shows:
             return ""
         if not movies_list and tv_shows:
