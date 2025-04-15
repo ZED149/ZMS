@@ -39,8 +39,6 @@ class MediaManager:
                         message: str, host: str, port: int,
                         password: str, context) -> None:
         msg = MIMEMultipart('related')
-        # msg = EmailMessage()
-        # msg['From'] = email.utils.formataddr((DISPLAY_NAME, username))
         msg['From'] = formataddr((str(Header('ZED', 'utf-8')), username))
         msg['To'] = receiver
         # subject [Updates] ZED Media Server
@@ -50,8 +48,6 @@ class MediaManager:
         # attaching msgAlternative to the msg
         msgAlternative = MIMEMultipart('alternative')
         msg.attach(msgAlternative)
-        # msgText = MIMEText("This is the alternative plain text message.")
-        # msgAlternative.attach(msgText)
 
         # attaching message to the msgAlternative
         msgText = MIMEText(message, 'html')
@@ -59,19 +55,12 @@ class MediaManager:
 
         # opening image in binary
         with open('C:\\Users\\salma\\OneDrive\\Desktop\\Media_Manager\\media_manager\\test.png', 'rb') as fb:
-            # image_data = fb.read()
             msgImage = MIMEImage(fb.read(), _subtype='png')
         
-        # Manually craft image MIME part
-        # msgImage = MIMEBase('image1', 'png')
-        # msgImage.set_payload(image_data)
-        # encoders.encode_base64(msgImage)
-
         del msgImage['Content-Disposition']
         msgImage.add_header('Content-Disposition', 'inline')
         msgImage.add_header('Content-ID', '<image1>')
         msgImage.add_header('X-Attachment-Id', 'image1')  # optional but may help
-        # msgImage.add_header("Content-Location", "test.png")
 
         msg.attach(msgImage)
 
@@ -111,10 +100,8 @@ CREATE TABLE "movies" (
                            """)
             except sqlite3.OperationalError:
                 print(f"{self.ERROR}Table 'moveis' already exists in DB.")
-                # print("Exiting Program...")
                 conn.close()
                 return
-                # exit(0)
             # closing connecting to the db
             conn.close()
         else:
@@ -138,8 +125,6 @@ CREATE TABLE "movies" (
             db_name (str): name of the database file. Defaults to "movies.db".
         """
 
-        # connecting to database
-        # conn = sqlite3.connect(db_name)
         cursor = self.conn.cursor()
         movies = []
         # iterating on the given path and adding them to the db_name
@@ -162,16 +147,9 @@ CREATE TABLE "movies" (
                 # appending the name of movie to the movies list for email purposes
                 movies.append(movie_name)
             except sqlite3.IntegrityError:
-                # raise NameError(f"movie({movie_name}) already present in the {db_name}.")
                 if verbose:
                     print(f"{self.WARNING}Movie --> {movie_name} already present in DB.")
-                continue
-            
-        # commiting changes to db
-        # conn.commit()
-        # closing connection to the db
-        # conn.close()
-        
+                continue      
         # Return
         return movies
 
@@ -184,8 +162,6 @@ CREATE TABLE "movies" (
             db_name (str, optional): Name of the database. Defaults to None.
         """
         if db_name:    
-            # connecting to database
-            # conn = sqlite3.connect(db_name)
             cursor = self.conn.cursor()
 
             # database query
@@ -208,23 +184,12 @@ CREATE TABLE "movies" (
                 cursor.execute(query_1)
             except sqlite3.OperationalError:
                 print(f"{self.ERROR}Table 'episodes' already exists in DB.")
-                # print("Exiting Program...")
-                # conn.close()
                 return
-                # exit with status 1. Status 1 means that an error occured while creating table in the database.
-                exit(1)
             try:
                 cursor.execute(query_2)
             except sqlite3.OperationalError:
                 print(f"{self.ERROR}Table 'tv_shows' already exists in DB.")
-                # print("Exiting Program...")
-                # conn.close()
                 return
-                # exit with status 1. Status 1 means that an error occured while creating table in the database.
-                exit(1)
-
-            # closing the connection to the database
-            # conn.close()
         else:
             raise TypeError("db_name cannot be none.")
 
@@ -237,9 +202,6 @@ CREATE TABLE "movies" (
             path (str): path to iterate on.
             db_name (str, optional): Name of the database. Defaults to "tv_shows.db".
         """
-
-        # connecting to the database
-        # conn = sqlite3.connect(db_name)
         cursor = self.conn.cursor()
 
         tv_shows = {}
@@ -271,9 +233,7 @@ CREATE TABLE "movies" (
 """
                 data_tuple = (tv_show_dir_name, )
                 cursor.execute(query, data_tuple)
-                # print(f"{tv_show_dir_name}:----> {file}")
                 tv_show_id = cursor.fetchone()[0]
-                # print(tv_show_id)  # printing assiciated tv_show with that episode
                 
                 # insert tv_show_name into the db
                 query = """INSERT INTO "episodes"
@@ -290,9 +250,6 @@ CREATE TABLE "movies" (
                     if verbose:
                         print(f"{self.WARNING}Episode {file} is already present in the {tv_show_dir_name}.")
                     continue
-
-        # conn.commit()
-        # conn.close()    
         return tv_shows
 
 
@@ -304,8 +261,6 @@ CREATE TABLE "movies" (
         """
 
         if db_name:
-            # connecting to the DB
-            # conn = sqlite3.connect(db_name)
             cursor = self.conn.cursor()
 
             # writing query
@@ -321,12 +276,7 @@ CREATE TABLE "movies" (
                 cursor.execute(query)
             except sqlite3.OperationalError:
                 print(f"{self.ERROR}table 'emails' already exists in DB.")
-                # closing connection
-                # conn.close()
                 return 
-            # if query is executed sucessfully
-            # closing connection to the DB
-            # conn.close()
         else:
             raise TypeError("db_name cannot be none.")
         
@@ -344,16 +294,12 @@ CREATE TABLE "movies" (
         if file is None or db_name is None:
             raise TypeError("db_name or file cannot be none.")
         else:
-            # connecting to the db
-            # conn = sqlite3.connect(db_name)
             cursor = self.conn.cursor()
 
             import pandas as pd
             df = pd.read_excel(file)
             full_names = df['full name'].to_list()
             emails = df['emails'].to_list()
-            # print(full_names)
-            # print(emails)
 
             # generating query
             query = """INSERT INTO "emails"
@@ -367,10 +313,6 @@ CREATE TABLE "movies" (
                     cursor.execute(query, data_tuple)
                 except sqlite3.IntegrityError:
                     print(f"{self.WARNING}email \"{d[1]}\" already exists in the DB.")
-            # data_tuple = (full_names, emails)
-            # cursor.execute(query, data_tuple)
-            # conn.commit()
-            # conn.close()
 
 
     # se (send_email)
