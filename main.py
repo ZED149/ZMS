@@ -27,13 +27,13 @@ if __name__ == "__main__":
         o.cmtid(DB_NAME)
 
         # adding all movies to the db
-        o.amtd("media_manager/movies/", DB_NAME)
+        o.amtd(True, "media_manager/movies/", DB_NAME)
 
         # creating tv_shows table in the db
         o.ctstid(DB_NAME)
         
         # adding tv_shows to the db
-        o.atstd("media_manager/tv_shows/", DB_NAME)
+        o.atstd(True, "media_manager/tv_shows/", DB_NAME)
 
         # creating emails table in the db
         o.cetid(DB_NAME)
@@ -46,8 +46,8 @@ if __name__ == "__main__":
     movies = []
     tv_shows = {}
     # crawling the directory for new movies
-    movies = o.amtd("media_manager/not_uploaded/movies/", db_name=DB_NAME)
-    tv_shows = o.atstd("media_manager/not_uploaded/tv_shows/", db_name=DB_NAME)
+    movies = o.amtd(False, "media_manager/not_uploaded/movies/", db_name=DB_NAME)
+    tv_shows = o.atstd(False, "media_manager/not_uploaded/tv_shows/", db_name=DB_NAME)
     print("Movies: ")
     print(movies)
     print("TV Shows: ")

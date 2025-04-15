@@ -122,7 +122,7 @@ CREATE TABLE "movies" (
         
 
     # amtd (add movies to database)
-    def amtd(self, path: str, db_name: str = "movies.db") -> list:
+    def amtd(self, verbose: bool = False, path: str = None, db_name: str = "movies.db") -> list:
 
         """Read movie media from the given path and add them to the database.
         If none db name is passed, media.db is created.\n
@@ -163,7 +163,8 @@ CREATE TABLE "movies" (
                 movies.append(movie_name)
             except sqlite3.IntegrityError:
                 # raise NameError(f"movie({movie_name}) already present in the {db_name}.")
-                print(f"{self.WARNING}Movie --> {movie_name} already present in DB.")
+                if verbose:
+                    print(f"{self.WARNING}Movie --> {movie_name} already present in DB.")
                 continue
             
         # commiting changes to db
@@ -229,7 +230,7 @@ CREATE TABLE "movies" (
 
 
     # atstd (add_tv_shows_to_database)
-    def atstd(self, path: str, db_name: str = "tv_shows.db") -> dict:
+    def atstd(self, verbose: bool = False, path: str = None, db_name: str = "tv_shows.db") -> dict:
         """iterate on path and add all tv_shows to the given db.
 
         Args:
@@ -257,7 +258,8 @@ CREATE TABLE "movies" (
                     # adding tv_show name to the dict with an empty list (for episodes) as value
                     tv_shows[folder] = []
                 except sqlite3.IntegrityError:
-                    print(f"{self.WARNING}Tv Show --> {folder} already present in DB.")
+                    if verbose: 
+                        print(f"{self.WARNING}Tv Show --> {folder} already present in DB.")
                     continue
             
             for file in files:      # file is the episode for that tv_show
@@ -285,7 +287,8 @@ CREATE TABLE "movies" (
                     # adding episode for that tv_show
                     tv_shows[tv_show_dir_name].append(file)
                 except sqlite3.IntegrityError:
-                    print(f"{self.WARNING}Episode {file} is already present in the {tv_show_dir_name}.")
+                    if verbose:
+                        print(f"{self.WARNING}Episode {file} is already present in the {tv_show_dir_name}.")
                     continue
 
         # conn.commit()
