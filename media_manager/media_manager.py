@@ -21,6 +21,7 @@ from email.message import EmailMessage
 from email.header import Header
 from email.mime.base import MIMEBase
 from email import encoders
+import re
 
 
 class MediaManager:
@@ -225,6 +226,13 @@ CREATE TABLE "movies" (
                     continue
             
             for file in files:      # file is the episode for that tv_show
+                # need to strip episode name for just its number
+                # e.g Dil e Nadaan Episode 23 - [Eng Sub] ......
+                # we just need the episode number
+                episode_number = re.search(r"Ep[ -_#@]\d{,3}|Episode[ -_#@]\d{,3}|Last Episode", file)
+                if episode_number == None:
+                    print(file)
+
                 tv_show_dir_name = root.replace(path, "")
                 # get tv_show_id based on the tv_show_dir_name
                 query = """SELECT (tv_show_id)
@@ -241,11 +249,11 @@ CREATE TABLE "movies" (
                             VALUES(?,?);
 """
                 # file is the name of the episode
-                data_tuple = (file, tv_show_id)
+                data_tuple = (episode_number.group(), tv_show_id)
                 try:
                     self.conn.execute(query, data_tuple)
                     # adding episode for that tv_show
-                    tv_shows[tv_show_dir_name].append(file)
+                    tv_shows[tv_show_dir_name].append(episode_number.group())
                 except sqlite3.IntegrityError:
                     if verbose:
                         print(f"{self.WARNING}Episode {file} is already present in the {tv_show_dir_name}.")

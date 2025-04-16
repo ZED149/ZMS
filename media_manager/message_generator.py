@@ -4,23 +4,6 @@
 
 
 class MessageGenerator:
-    # private variables
-    __signature = '''\
-    <hr style="height10px">
-    <table>
-            <tr>
-                <td bgcolor="#00A4BD" align="center" style="color: white;">
-                    <h1>ZED</h1>
-                </td>
-                <td align="center" style="padding: 10px 0 0 10px;">
-                    <img src="<cid:image1>" height=50px width=50/>
-                </td>
-            </tr>
-    </table><br>
-<label>Contact us: </label><span><a href="https://www.zed149.com">Support</a></span>
-<p>Thanks for your order.</p>
-'''
-
     # Methods
 
     @classmethod
@@ -44,7 +27,8 @@ class MessageGenerator:
             include_tv_shows = False
         
         # start generating email
-        message = '''<!DOCTYPE html>
+        message = '''
+<!DOCTYPE html>
   <html lang="en">
   <head>
     <meta charset="UTF-8" />

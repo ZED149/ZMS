@@ -1,4 +1,1 @@
-1. Add code for the verbosity of warning in code
-2. clean code from unwanted commented lines
-3. modify the email markup to add added episodes for the updated tv shows
-4. update the code to send email to the dynamic recipents. (emails for the user(s) are already stored in the DB)
+3. update the code to send email to the dynamic recipents. (emails for the user(s) are already stored in the DB)
