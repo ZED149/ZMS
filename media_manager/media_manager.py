@@ -33,6 +33,7 @@ class MediaManager:
     ERROR = "ERROR: "
     MESSAGE = ""
     conn = None
+    __receipents_emails = None
 
     # utility functions
     # send_email_core
@@ -43,7 +44,7 @@ class MediaManager:
         msg['From'] = formataddr((str(Header('ZED', 'utf-8')), username))
         msg['To'] = receiver
         # subject [Updates] ZED Media Server
-        msg['Subject'] = "Test Mail 24"
+        msg['Subject'] = "Test Mail 27"
         msg.preamble = "This is a multi-part message in MIME format."
 
         # attaching msgAlternative to the msg
@@ -75,6 +76,13 @@ class MediaManager:
     def __init__(self, db_name: str = None):
         # connecting to the DB
         self.conn = sqlite3.connect(db_name)
+        # fetch customer emails here
+        cursor = self.conn.cursor()
+        query = '''
+SELECT email, full_name from emails
+'''
+        cursor.execute(query)
+        self.__receipents_emails = cursor.fetchall()
 
     # methods
 
@@ -322,9 +330,19 @@ CREATE TABLE "movies" (
                 except sqlite3.IntegrityError:
                     print(f"{self.WARNING}email \"{d[1]}\" already exists in the DB.")
 
+    
+    # send_emails
+    def send_emails(self, db_name: str = None, movies_list: list = None, tv_shows: dict = None) -> bool:
+        for receipent in self.__receipents_emails:
+            message = self.__ce(db_name=db_name, movies_list=movies_list, tv_shows=tv_shows, full_name=receipent[1])
+            flag = self.__se(message=message, receiver_email=receipent[0])
+            if not flag:
+                return False
+        return True
+
 
     # se (send_email)
-    def se(self, message: str = None):
+    def __se(self, message: str = None, receiver_email: str = None) -> bool:
         """Sends an email to the receiver's. Receipent(s) are fetched from the DB. In order to add
         more receipent(s) to the server, use aetd() method.
 
@@ -339,38 +357,33 @@ CREATE TABLE "movies" (
             username = "no-reply@zed149.com"
             password = "NFAKisAlive@123"
 
-            receiver = "salmanahmad1279@gmail.com"
             context = ssl.create_default_context()
-
-            # message string
-            message = message
-
             # core functionality to send email
-            self.send_email_core(username, receiver, message, host, port, password, context)
+            self.send_email_core(username, receiver_email, message, host, port, password, context)
             return True
         else:
             return False
 
 
     # ce (create_email)
-    def ce(self, db_name: str = None, movies_list: list = None, tv_shows: dict = None) -> str:
+    def __ce(self, db_name: str = None, movies_list: list = None, tv_shows: dict = None, full_name: str = None) -> str:
         # Validations
-        # movies_list = ["Interstellar", "John Wick 2", "Iron Man", "The Day After Tomorrow"]
-        # tv_shows = {
-        #     "Parizaad": [],
-        #     "BOL": [],
-        #     "Meem Se Muhabbat": [],
-        #     "Zindagi Gulzar Hai": []
-        # }
+        movies_list = ["Interstellar", "John Wick 2", "Iron Man", "The Day After Tomorrow"]
+        tv_shows = {
+            "Parizaad": [],
+            "BOL": [],
+            "Meem Se Muhabbat": [],
+            "Zindagi Gulzar Hai": []
+        }
         if not movies_list and not tv_shows:
             return ""
         if not movies_list and tv_shows:
-            message = MessageGenerator.no_reply_movies_added("Salman Ahmad", movies_list, tv_shows=tv_shows)
+            message = MessageGenerator.no_reply_movies_added(full_name, movies_list, tv_shows=tv_shows)
             return message
         if not tv_shows and movies_list:
-            message = MessageGenerator.no_reply_movies_added("Salman Ahmad", movies_list, tv_shows=tv_shows)
+            message = MessageGenerator.no_reply_movies_added(full_name, movies_list, tv_shows=tv_shows)
             return message
-        message = MessageGenerator.no_reply_movies_added("Salman Ahmad", movies_list, tv_shows=tv_shows)
+        message = MessageGenerator.no_reply_movies_added(full_name, movies_list, tv_shows=tv_shows)
         return message
     
 

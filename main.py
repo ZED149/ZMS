@@ -52,10 +52,12 @@ if __name__ == "__main__":
     print(movies)
     print("TV Shows: ")
     print(tv_shows)
-    # creating emails
-    o.MESSAGE = o.ce(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
-    flag = o.se(message=o.MESSAGE)
+    # # creating emails
+    # o.MESSAGE = o.ce(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
+    # flag = o.sew(message=o.MESSAGE)
+    flag = o.send_emails(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
     if flag:
+        print("Being committed to the DB.")
         o.commit()
     else:
         print("email not send and not committed to the DB.")
