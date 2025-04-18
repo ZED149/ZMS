@@ -212,7 +212,6 @@ CREATE TABLE "movies" (
             db_name (str, optional): Name of the database. Defaults to "tv_shows.db".
         """
         cursor = self.conn.cursor()
-
         tv_shows = {}
 
         # iterating on path and adding tv_shows to db
@@ -223,6 +222,7 @@ CREATE TABLE "movies" (
                             VALUES(?);
 """
                 data_tuple = (folder, )     # folder is the name of tv_show
+                # tv_shows[folder] = []
                 try:
                     # inserting tv_show name into the DB
                     self.conn.execute(query, data_tuple)
@@ -237,7 +237,8 @@ CREATE TABLE "movies" (
                 # need to strip episode name for just its number
                 # e.g Dil e Nadaan Episode 23 - [Eng Sub] ......
                 # we just need the episode number
-                episode_number = re.search(r"Ep[ -_#@]\d{,3}|Episode[ -_#@]\d{,3}|Last Episode", file)
+                episode_number = re.search(r"Ep[ -_#@]\d{0,3}|Episode[ -_#@]{,3}\d{0,3}|Last[ -_#]{,3}Episode|2nd[ -_#@]{,3}Last Episode[ -_#@]{,3}\d{0,3}", file)
+
                 if episode_number == None:
                     print(file)
 
@@ -267,7 +268,46 @@ CREATE TABLE "movies" (
                         print(f"{self.WARNING}Episode {file} is already present in the {tv_show_dir_name}.")
                     continue
         return tv_shows
+    
 
+    # autstd(add_updated_tv_shows_to_db)
+    def autstd(self, db_name: str = None, path: str = None) -> None:
+        """Updates already added TV Shows in DB. Updates their episodes.
+
+        Args:
+            db_name (str, optional): Name of the DB to retrive tv_show name from. Defaults to None.
+            path (str, optional): path to read from. Defaults to None.
+
+        Raises:
+            TypeError: _description_
+            TypeError: _description_
+        """
+
+        # aquiring cursor
+        cursor = self.conn.cursor()
+        tv_shows_id = {}
+        # walking the path
+        for root, folders, files in os.walk(path):
+            for folder in folders:
+                query = '''SELECT tv_show_id
+                FROM tv_shows
+                WHERE tv_show_name=?'''
+                cursor.execute(query, (folder, ))
+                tv_shows_id[folder] = cursor.fetchone()[0]
+            for file in files:  # file is the name of the episode
+                episode_number = re.search(r"Ep[ -_#@]\d{0,3}|Episode[ -_#@]{,3}\d{0,3}|Last[ -_#]{,3}Episode|2nd[ -_#@]{,3}Last Episode[ -_#@]{,3}\d{0,3}", file)
+                
+                # adding new episodes to the DB
+                query = '''INSERT INTO "episodes"
+                (episode_name, tv_show_id)
+                VALUES(?,?);'''
+                tv_show_dir_name = root.replace(path, "")
+                data_tuple = (episode_number.group(), tv_shows_id[tv_show_dir_name])
+                cursor.execute(query, data_tuple)
+                self.conn.commit()
+        print(tv_shows_id)
+                
+    
 
     # cetid(create_email_table_in_database)
     def cetid(self, db_name: str = None):
@@ -368,13 +408,13 @@ CREATE TABLE "movies" (
     # ce (create_email)
     def __ce(self, db_name: str = None, movies_list: list = None, tv_shows: dict = None, full_name: str = None) -> str:
         # Validations
-        movies_list = ["Interstellar", "John Wick 2", "Iron Man", "The Day After Tomorrow"]
-        tv_shows = {
-            "Parizaad": [],
-            "BOL": [],
-            "Meem Se Muhabbat": [],
-            "Zindagi Gulzar Hai": []
-        }
+        # movies_list = ["Interstellar", "John Wick 2", "Iron Man", "The Day After Tomorrow"]
+        # tv_shows = {
+        #     "Parizaad": [],
+        #     "BOL": [],
+        #     "Meem Se Muhabbat": [],
+        #     "Zindagi Gulzar Hai": []
+        # }
         if not movies_list and not tv_shows:
             return ""
         if not movies_list and tv_shows:

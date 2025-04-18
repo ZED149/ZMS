@@ -45,21 +45,24 @@ if __name__ == "__main__":
     # Now need to create and then send emails
     movies = []
     tv_shows = {}
-    # crawling the directory for new movies
-    movies = o.amtd(False, "media_manager/not_uploaded/movies/", db_name=DB_NAME)
-    tv_shows = o.atstd(False, "media_manager/not_uploaded/tv_shows/", db_name=DB_NAME)
-    print("Movies: ")
-    print(movies)
-    print("TV Shows: ")
-    print(tv_shows)
-    # # creating emails
-    # o.MESSAGE = o.ce(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
-    # flag = o.sew(message=o.MESSAGE)
-    flag = o.send_emails(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
-    if flag:
-        print("Being committed to the DB.")
-        o.commit()
-    else:
-        print("email not send and not committed to the DB.")
-
+    # # crawling the directory for new movies
+    # movies = o.amtd(False, "media_manager/not_uploaded/movies/", db_name=DB_NAME)
+    # # crawling the directory for new or updated tv_shows
+    # tv_shows = o.atstd(False, "media_manager/not_uploaded/tv_shows/", db_name=DB_NAME)
+    # print("Movies: ")
+    # print(movies)
+    # print("TV Shows: ")
+    # print(tv_shows)
+    # # # creating emails
+    # # o.MESSAGE = o.ce(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
+    # # flag = o.sew(message=o.MESSAGE)
+    # flag = o.send_emails(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
+    # if flag:
+    #     print("Being committed to the DB.")
+    #     o.commit()
+    # else:
+    #     print("email not send and not committed to the DB.")
+    o.autstd(db_name=DB_NAME, path="media_manager/not_uploaded/tv_shows/updated/")
+    # o.atstd(True, "media_manager/not_uploaded/tv_shows/new/",db_name=DB_NAME)
+    # o.commit()
 
