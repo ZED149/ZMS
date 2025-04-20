@@ -1,1 +1,6 @@
-3. update the code to send email to the dynamic recipents. (emails for the user(s) are already stored in the DB)
+1. Add verbosity for the emails performing whole Working
+2. properly test tv_show methods
+3. remove unwanted code
+4. add more details of movies in email
+5. add more details of tv_shows in email
+6. make and test a new method for adding new and updated tv shows to the DB
