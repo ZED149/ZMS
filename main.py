@@ -49,25 +49,21 @@ if __name__ == "__main__":
         "Dil e Nadaan": ["Episode 32", "Episode 33"],
         "Parizaad": ["2nd Last Episode", "Last Episode"]
     }
-    # # crawling the directory for new movies
-    # movies = o.amtd(False, "media_manager/not_uploaded/movies/", db_name=DB_NAME)
-    # # crawling the directory for new or updated tv_shows
+    # crawling the directory for new movies
+    movies = o.amtd(False, "media_manager/not_uploaded/movies/", db_name=DB_NAME)
+    # crawling the directory for new or updated tv_shows
     # tv_shows = o.atstd(False, "media_manager/not_uploaded/tv_shows/", db_name=DB_NAME)
-    # print("Movies: ")
-    # print(movies)
-    # print("TV Shows: ")
-    # print(tv_shows)
-    # # # creating emails
-    # # o.MESSAGE = o.ce(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
-    # # flag = o.sew(message=o.MESSAGE)
-    # flag = o.send_emails(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
-    # if flag:
-    #     print("Being committed to the DB.")
-    #     o.commit()
-    # else:
-    #     print("email not send and not committed to the DB.")
-    # o.autstd(db_name=DB_NAME, path="media_manager/not_uploaded/tv_shows/updated/")
-    # o.atstd(True, "media_manager/not_uploaded/tv_shows/new/",db_name=DB_NAME)
+    tv_shows = o.nmtatstd(verbosity=False, db_name=DB_NAME, path="test_directory/")
+    print("Movies: ")
+    print(movies)
+    print("TV Shows: ")
+    print(tv_shows)
+    # # creating emails
+    # o.MESSAGE = o.ce(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
+    flag = o.send_emails(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
+    if flag:
+        print("Being committed to the DB.")
+        # o.commit()
+    else:
+        print("email not send and not committed to the DB.")
     # o.commit()
-
-    o.send_emails(verbose=True, db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
