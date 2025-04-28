@@ -360,6 +360,7 @@ CREATE TABLE "movies" (
                 a[e.name] = []
                 # adding it to the dict that will be used for email purposes
                 tv_shows[e.name] = []
+                tv_shows[e.name].append("na")
                 if verbosity:
                     print(f"[TV SHOW]: {e.name} inserted.")
                 # fetching tv_show_id again after inserting it into the
@@ -542,7 +543,7 @@ CREATE TABLE "movies" (
 
             context = ssl.create_default_context()
             # core functionality to send email
-            # self.__send_email_core(username, receiver_email, message, host, port, password, context)
+            self.__send_email_core(username, receiver_email, message, host, port, password, context)
             return True
         else:
             return False

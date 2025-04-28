@@ -159,16 +159,21 @@ class MessageGenerator:
         # check for tv_shows
         if include_tv_shows:
           message = message + '''  
-        <!-- Tv Shows -->
-        <div class="section-title">📺 New TV Shows Added</div>
+          <!-- Tv Shows -->
+          <div class="section-title">📺 New TV Shows Added</div>
 
-        <div class="movie">
-        <div class="movie-details">
+          <div class="movie">
+          <div class="movie-details">
         '''
           
           # adding new tv shows 
           for key, val in tv_shows.items():
-              message = message + f'<p class="movie-title">{key}</p>'
+              # need to check if that tv_show is newly added or not
+              values = tv_shows[key]
+              if "na" in values:
+                message = message + f'<p class="movie-title">{key} (New)</p>'
+              else:
+                 message = message + f'<p class="movie-title">{key} (Updated)</p>'
 
           # appending it back to the code
           message = message + '''

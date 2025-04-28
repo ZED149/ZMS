@@ -43,12 +43,6 @@ if __name__ == "__main__":
 
 
     # Now need to create and then send emails
-    movies = ["Ae Dil Hai Muskil", "Happy New Year", "John Wick", "John Wick 2"]
-    tv_shows = {
-        "Meem Se Muhabbat": ["Episode 1", "Episode 2"],
-        "Dil e Nadaan": ["Episode 32", "Episode 33"],
-        "Parizaad": ["2nd Last Episode", "Last Episode"]
-    }
     # crawling the directory for new movies
     movies = o.amtd(False, "media_manager/not_uploaded/movies/", db_name=DB_NAME)
     # crawling the directory for new or updated tv_shows
@@ -59,11 +53,9 @@ if __name__ == "__main__":
     print("TV Shows: ")
     print(tv_shows)
     # # creating emails
-    # o.MESSAGE = o.ce(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
-    flag = o.send_emails(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
+    # flag = o.send_emails(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
     if flag:
         print("Being committed to the DB.")
-        # o.commit()
+        o.commit()
     else:
         print("email not send and not committed to the DB.")
-    # o.commit()
