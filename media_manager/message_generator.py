@@ -66,7 +66,7 @@ class MessageGenerator:
         if not tv_shows:
             include_tv_shows = False
         
-        # start generating email
+        # starting generating email
         message = '''
 <!DOCTYPE html>
   <html lang="en">
@@ -207,27 +207,31 @@ class MessageGenerator:
     
         # check for tv_shows
         if include_tv_shows:
-          message = message + '''  
-          <!-- Tv Shows -->
-          <div class="section-title">📺 New TV Shows Added</div>
-
-          <div class="movie">
-          <div class="movie-details">
-        '''
+          # Newly Added TV Shows
+          if tv_shows[0].NEW_TV_SHOW_ADDED:
+              message = message + '''  
+              <!-- Tv Shows -->
+              <div class="section-title">📺 New TV Shows Added</div>''' 
+              for tv_show in tv_shows:
+                  message = message + '''<div class="movie">
+                  <div class="movie-details">'''
+                  if tv_show.newly_added:
+                    message = message + f'''<p class="movie-title">{tv_show.tv_show_name}</p>
+                    <p class="movie-info">{tv_show.get_year()} | {tv_show.channel_name}</p>
+                </div>
+              </div>'''
           
-          # adding new tv shows 
-          for key, val in tv_shows.items():
-              # need to check if that tv_show is newly added or not
-              values = tv_shows[key]
-              if "na" in values:
-                message = message + f'<p class="movie-title">{key} (New)</p>'
-              else:
-                 message = message + f'<p class="movie-title">{key} (Updated)</p>'
-
-          # appending it back to the code
-          message = message + '''
-          </div>
-        </div>'''
+          # Recenlty Updated TV Shows
+          if tv_shows[0].UPDATED_TV_SHOWS:
+              message = message + '''<div class="section-title">♻️ Recently Updated TV Shows</div>'''
+              for tv_show in tv_shows:
+                if not tv_show.newly_added:
+                    message = message + '''<div class="movie">
+                    <div class="movie-details">'''
+                    message = message + f'''<p class="movie-title">{tv_show.tv_show_name}</p>
+                    <p class="movie-info">{tv_show.get_year()} | {tv_show.channel_name}</p>
+                </div>
+              </div>'''
 
         # appending the footer part of the email
         message = message + f'''
