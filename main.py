@@ -46,14 +46,14 @@ if __name__ == "__main__":
     # crawling the directory for new movies
     movies = o.amtd(False, "media_manager/not_uploaded/movies/", db_name=DB_NAME)
     # crawling the directory for new or updated tv_shows
-    # tv_shows = o.atstd(False, "media_manager/not_uploaded/tv_shows/", db_name=DB_NAME)
     tv_shows = o.nmtatstd(verbosity=False, db_name=DB_NAME, path="test_directory/")
     print("Movies: ")
     print(movies)
     print("TV Shows: ")
-    print(tv_shows)
-    # # creating emails
-    # flag = o.send_emails(db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
+    for ts in tv_shows:
+        print(ts)
+    # creating emails
+    flag = o.send_emails(verbose=True, db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
     if flag:
         print("Being committed to the DB.")
         o.commit()

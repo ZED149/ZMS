@@ -15,15 +15,14 @@ import pandas as pd
 from dotenv import load_dotenv
 from media_manager.message_generator import MessageGenerator
 from email.mime.image import MIMEImage
-from datetime import datetime
 from email.utils import formataddr
-from email.message import EmailMessage
 from email.header import Header
-from email.mime.base import MIMEBase
-from email import encoders
 import re
 import time
 from warnings import deprecated
+import undetected_chromedriver as uc
+from selenium.webdriver.common.keys import Keys
+from .classes import TVShow, Episode
 
 
 class MediaManager:
@@ -46,7 +45,7 @@ class MediaManager:
         msg['From'] = formataddr((str(Header('ZED', 'utf-8')), username))
         msg['To'] = receiver
         # subject [Updates] ZED Media Server
-        msg['Subject'] = "Test Mail 27"
+        msg['Subject'] = "Test Mail 46"
         msg.preamble = "This is a multi-part message in MIME format."
 
         # attaching msgAlternative to the msg
@@ -72,6 +71,35 @@ class MediaManager:
         with smtplib.SMTP_SSL(host, port, context=context) as server:
             server.login(username, password)
             server.sendmail(username, receiver, msg.as_string())
+
+    # scrap_channel_name
+    def __scrap_channel_name(self, verbose: bool = False, tv_show_name: str = None) -> str:
+        """Scrap TV Channel name for the given tv show and returns it.
+
+        Args:
+            tv_show_name (str, optional): Name of the show to scrap channel of. Defaults to None.
+
+        Returns:
+            str: Channel Name.
+        """
+        # initializing driver
+        driver = uc.Chrome()
+        # making request to the url(youtube.com) and fetching frontend code
+        driver.get("https://www.youtube.com/")
+        # searching for drama name (Ae Dil drama) in the search bar and pressing ENTER
+        driver.find_element(by="xpath", value='/html/body/ytd-app/div[1]/div[2]/ytd-masthead/div[4]/div[2]/yt-searchbox/div[1]/form/input').send_keys(f"{tv_show_name} drama" + Keys.RETURN)
+        time.sleep(5)
+        # scraping tv channel name for that drama
+        channel = driver.find_element(by='xpath', value='/html/body/ytd-app/div[1]/ytd-page-manager/ytd-search/div[1]/ytd-two-column-search-results-renderer/div/ytd-section-list-renderer/div[2]/ytd-item-section-renderer/div[3]/yt-lockup-view-model[1]/div/div/yt-lockup-metadata-view-model/div[1]/div[1]/yt-content-metadata-view-model/div[1]/span[1]/span/a')
+        if verbose:
+            print(f"[CHANNEL NAME FOR]: {tv_show_name} is ({channel.text}).")
+        driver._delay = 5
+        channel_name =  channel.text
+        # closing driver
+        driver.close()
+        # Return
+        return channel_name
+    
 
     # private data mambers
     # constructor
@@ -192,6 +220,7 @@ CREATE TABLE "movies" (
 	"tv_show_name"	TEXT NOT NULL UNIQUE,
 	"created_date"	TEXT NOT NULL DEFAULT 0,
 	"last_modified_date"	TEXT,
+    "channel_name"	TEXT,
 	PRIMARY KEY("tv_show_id" AUTOINCREMENT)
 );
 """
@@ -318,7 +347,7 @@ CREATE TABLE "movies" (
                 
     
     # nmtatstd (new_method_to_add_tv_shows_to_database)
-    def nmtatstd(self, verbosity: bool = False, db_name: str = None, path: str = None) -> dict:
+    def nmtatstd(self, verbosity: bool = False, db_name: str = None, path: str = None) -> TVShow:
         """Add TV Shows from 'path' to the db. Also updates the previously added tv shows along with their episodes.
 
         Args:
@@ -333,29 +362,39 @@ CREATE TABLE "movies" (
         # walking on the given path
         obj = os.scandir(path=path)
         tv_shows = {}
-        for e in obj:
+        tv_shows_list = []  # list to be used for return purpose, will contain all the tv_shows along with their episodes that are now inserted
+        for e in obj:   # for each tv_show in provided path
             # retreive last modified time fromt the DB
             query = '''
-            SELECT tv_show_id
+            SELECT tv_show_id, channel_name
             FROM tv_shows
             WHERE tv_show_name=?
 '''
             data_tuple = (e.name,)
-            tv_show_id = cursor.execute(query, data_tuple).fetchone()
+            data = cursor.execute(query, data_tuple).fetchall()
+            tv_show_id = None
+            channel_name = None
+            if data:
+                tv_show_id = data[0][0]
+                channel_name = data[0][1]
             # if no id is fetched, it means no tv_shows has added for that name, so we need to add it
             # we also add episodes for that tv_show
-            if tv_show_id == None:
+            if tv_show_id == None:      # add tv_show for the first time
                 a = {}
+                # scraping channel name from web
+                if verbosity:
+                    print(f"[CHANNEL NAME]: --> {e.name}")
+                channel_name = self.__scrap_channel_name(verbose=verbosity, tv_show_name=e.name)
                 # inserting tv_show for that name
                 query = '''
                 INSERT INTO "tv_shows"
-                (tv_show_name, created_date, last_modified_date)
-                VALUES (?,?,?);
+                (tv_show_name, created_date, last_modified_date, channel_name)
+                VALUES (?,?,?,?);
 '''
                 created_date = time.ctime(e.stat().st_birthtime)
                 last_modified_date = time.ctime(e.stat().st_mtime)
 
-                data_tuple = (e.name, created_date, last_modified_date)
+                data_tuple = (e.name, created_date, last_modified_date, channel_name)
                 cursor.execute(query, data_tuple)
                 a[e.name] = []
                 # adding it to the dict that will be used for email purposes
@@ -372,6 +411,7 @@ CREATE TABLE "movies" (
                 data_tuple = (e.name,)
                 tv_show_id = cursor.execute(query, data_tuple).fetchone()[0]
                 # inserting episodes into db now,
+                episodes_list = []
                 for episode in os.scandir(path=e.path):
                     query = '''
                     INSERT INTO "episodes"
@@ -384,8 +424,16 @@ CREATE TABLE "movies" (
                     a[e.name].append(episode_name)
                     # adding to the dict that will be used for email purposes
                     tv_shows[e.name].append(episode_name)
+                    # appending it to the Episodes object to be then inserted into TVShow object
+                    episodes_list.append(Episode(episode_name=episode_name, created_date=created_date))
+                # appending a TVShow object along with its all data to the tv_shows_list to be used in emailing purpose
+                tv_shows_list.append(TVShow(tv_show_id=tv_show_id, tv_show_name=e.name, created_date=created_date, 
+                                            last_modified_date=last_modified_date, channel_name=channel_name,
+                                            episodes=episodes_list, newly_added=True))
                 if verbosity:
                     print(f"[TV_SHOW_EPISODES]: ({e.name})--> {a[e.name]}")
+                # setting GLOBAL New_Added_TV_Shows to True, to find out whether new tv_shows were added or not
+                tv_shows_list[0].NEW_TV_SHOW_ADDED = True
 
             else:   # it means a tv_show with that name is already present
                 # now, we need to check the last modification date for that id,
@@ -399,25 +447,30 @@ CREATE TABLE "movies" (
                 WHERE tv_show_id=?
 '''
                 # fetching all episodes for that tv_show
-                episodes = cursor.execute(query, (tv_show_id[0], )).fetchall()
-                episodes = [c[0] for c in episodes]
+                episodes = cursor.execute(query, (tv_show_id, )).fetchall()
+                episodes = [c[0] for c in episodes]     # these are all the episodes that are already present in DB and are now fetched
                 if verbosity:
                     print(f"[EPISODES]: {episodes}")
                 a = {}
                 episode_inserted_flag = False
+                episodes_list = []      # to be used for email purpose
+
                 # iterating on that tv_show
-                for episode in os.scandir(path=e.path):
+                for episode in os.scandir(path=e.path): # for each episode of that tv_show
                     episode_name = re.search(r"Ep[ -_#@]\d{0,3}|Episode[ -_#@]{,3}\d{0,3}|Last[ -_#]{,3}Episode|2nd[ -_#@]{,3}Last Episode[ -_#@]{,3}\d{0,3}", episode.name).group()
-                    if episode_name not in episodes:
+                    if episode_name not in episodes:    # if current_episode is not present in already fethced episodes
                         # append to list if that episode is already not present in db
                         a[episode_name] = time.ctime(episode.stat().st_birthtime)
+                        # also appending it to the episodes_list for that tv_show
+                        episodes_list.append(Episode(episode_name=episode_name, 
+                                                     created_date=time.ctime(episode.stat().st_birthtime)))
                         # query to insert episode along with its details into the db
                         query = '''
                         INSERT INTO "episodes"
                         (episode_name, tv_show_id, created_date)
                         VALUES(?,?,?);
                         '''
-                        data_tuple = (episode_name, tv_show_id[0], time.ctime(episode.stat().st_birthtime))
+                        data_tuple = (episode_name, tv_show_id, time.ctime(episode.stat().st_birthtime))
                         cursor.execute(query, data_tuple)
                         # setting the episode_inserted_flag to True, as we will be updating last_modified_date for it later
                         episode_inserted_flag = True
@@ -431,14 +484,22 @@ CREATE TABLE "movies" (
                     SET last_modified_date=?
                     WHERE tv_show_id=?
 '''
-                    data_tuple = (time.ctime(), tv_show_id[0])
+                    data_tuple = (time.ctime(), tv_show_id)
                     cursor.execute(query, data_tuple)
                     # now reverting the flag
                     episode_inserted_flag = False
+                    # appending a TVShow object to the tv_show_list to be further used in email purpose
+                    tv_shows_list.append(TVShow(tv_show_id=tv_show_id, tv_show_name=e.name,
+                                                channel_name=channel_name, episodes=episodes_list,
+                                                created_date=time.ctime(episode.stat().st_birthtime)))
+                    # setting the UPDATED_TV_Show to True to check either tv_shows were updated or not
+                    tv_shows_list[0].UPDATED_TV_SHOWS = True
                 # controllig output with verbosity statements
                 if verbosity:
                     print(f"{e.name}: {a}")
-        return tv_shows
+        # Return point
+        # return tv_shows
+        return tv_shows_list
 
 
     # cetid(create_email_table_in_database)
@@ -484,7 +545,6 @@ CREATE TABLE "movies" (
         else:
             cursor = self.conn.cursor()
 
-            import pandas as pd
             df = pd.read_excel(file)
             full_names = df['full name'].to_list()
             emails = df['emails'].to_list()
@@ -504,21 +564,21 @@ CREATE TABLE "movies" (
 
     
     # send_emails
-    def send_emails(self, verbose: bool = False, db_name: str = None, movies_list: list = None, tv_shows: dict = None) -> bool:
-        if verbose:
-            print(f"[MOVIES]: {movies_list}")
-            print(f"[TV SHOWS]: {tv_shows}")
+    def send_emails(self, verbose: bool = False, db_name: str = None, movies_list: list = None, tv_shows: TVShow = None) -> bool:
+        # if verbose:
+        #     print(f"[MOVIES]: {movies_list}")
+        #     print(f"[TV SHOWS]: {tv_shows}")
         for receipent in self.__receipents_emails:
             # message (email markup) for the user is generated by the .__ce() method.
             message = self.__ce(verbose=verbose, db_name=db_name, movies_list=movies_list, tv_shows=tv_shows, 
                                 full_name=receipent[1])
-            # email is sent by using the .se() method, it receives message markup and user name for the receipent
+            # email is sent by using the .__se() method, it receives message markup and user name for the receipent
             if verbose:
                 print(f"[SENDING EMAIL]: to {receipent[1].capitalize()} @ {receipent[0]}")
             flag = self.__se(message=message, receiver_email=receipent[0])
-            if verbose and flag:
+            if verbose and flag:    # if verbosity is enabled and email is being sent
                 print(f"[EMAIL SENT]: to {receipent[1].capitalize()} @ {receipent[0]}")
-            if not flag:
+            if not flag:    # if verbosity is enabled but the email is not sent due to some reason
                 if verbose:
                     print(f"[EMAIL NOT SENT]: to {receipent[1].capitalize()} @ {receipent[0]}")
                 return False
@@ -550,7 +610,8 @@ CREATE TABLE "movies" (
 
 
     # ce (create_email)
-    def __ce(self, verbose: bool = False, db_name: str = None, movies_list: list = None, tv_shows: dict = None, full_name: str = None) -> str:
+    def __ce(self, verbose: bool = False, db_name: str = None, movies_list: list = None, 
+             tv_shows: TVShow = None, full_name: str = None) -> str:
         # Validations
         # movies_list = ["Interstellar", "John Wick 2", "Iron Man", "The Day After Tomorrow"]
         # tv_shows = {

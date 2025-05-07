@@ -341,3 +341,10 @@ media_manager/__pycache__/__init__.cpython-313.pyc
 cw/chromedriver.exe
 cw/LICENSE.chromedriver
 cw/THIRD_PARTY_NOTICES.chromedriver
+media_manager/classes/__pycache__/__init__.cpython-313.pyc
+media_manager/classes/__pycache__/episode.cpython-313.pyc
+media_manager/classes/__pycache__/tvshow.cpython-313.pyc
+test_directory/Aye Khuda/Episode 1.txt
+test_directory/Aye Khuda/Episode 2.txt
+test_directory/Aye Khuda/Episode 3.txt
+test_directory/Aye Khuda/Episode 4.txt
