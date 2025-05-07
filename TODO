@@ -1,3 +1,3 @@
-4. add more details of movies in email
-5. add more details of tv_shows in email
 6. also add logging for the app
+7. add asserts and checks for the yts api
+9. change the code in such a way that you store email sending data of movies in db when inserting movies and while creating email markup u make quesries to db (improve amtb)
