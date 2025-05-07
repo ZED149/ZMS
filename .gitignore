@@ -338,3 +338,6 @@ test_directory/EDKV2/2nd Last Episode 90.txt
 media_manager/__pycache__/message_generator.cpython-313.pyc
 media_manager/__pycache__/media_manager.cpython-313.pyc
 media_manager/__pycache__/__init__.cpython-313.pyc
+cw/chromedriver.exe
+cw/LICENSE.chromedriver
+cw/THIRD_PARTY_NOTICES.chromedriver
