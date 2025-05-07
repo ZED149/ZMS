@@ -22,7 +22,8 @@ import time
 from warnings import deprecated
 import undetected_chromedriver as uc
 from selenium.webdriver.common.keys import Keys
-from .classes import TVShow, Episode
+from .classes import TVShow, Episode, Movie
+import requests
 
 
 class MediaManager:
@@ -45,7 +46,7 @@ class MediaManager:
         msg['From'] = formataddr((str(Header('ZED', 'utf-8')), username))
         msg['To'] = receiver
         # subject [Updates] ZED Media Server
-        msg['Subject'] = "Test Mail 46"
+        msg['Subject'] = "Test Mail 47"
         msg.preamble = "This is a multi-part message in MIME format."
 
         # attaching msgAlternative to the msg
@@ -100,6 +101,39 @@ class MediaManager:
         # Return
         return channel_name
     
+    @classmethod
+    # extract_movie_details
+    def __extract_movie_details(cls, movie_name: str = None) -> dict:
+      """Returns basic details of the movie. Details are fetched by YTS API.
+
+      Args:
+          movie_name (str, optional): Name of the movie to fetch details of. Defaults to None.
+
+      Returns:
+          dict: Returns the dictionary of basic movie details.
+      """
+
+      movie_details = {}
+      # contructing url
+      url_for_id = f"https://yts.mx/api/v2/list_movies.json?&query_term='{movie_name}"
+      # making request
+      response = requests.get(url=url_for_id)
+      if response.json()["data"]["movie_count"] == 0:
+        # it means this movie is not present in YTS server.
+        return movie_details
+      
+      movie_id = response.json()["data"]["movies"][0]["id"]
+      # now extract basic movie details based on this id
+      url_for_basic_movie_details = f"https://yts.mx/api/v2/movie_details.json?movie_id={movie_id}"
+      # making request
+      response = requests.get(url=url_for_basic_movie_details)
+      movie_details["year"] = response.json()["data"]["movie"]["year"]
+      movie_details["genres"] = response.json()["data"]["movie"]["genres"]
+      movie_details["rating"] = response.json()["data"]["movie"]["rating"]
+      movie_details["small_cover_image"] = response.json()["data"]["movie"]["small_cover_image"]
+
+      return movie_details
+
 
     # private data mambers
     # constructor
@@ -134,6 +168,9 @@ CREATE TABLE "movies" (
 	"id"	INTEGER NOT NULL UNIQUE,
 	"name"	TEXT NOT NULL UNIQUE,
 	"release_year"	TEXT NOT NULL,
+	"genre"	TEXT,
+	"rating"	TEXT,
+	"small_cover_image"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
                            """)
@@ -172,19 +209,29 @@ CREATE TABLE "movies" (
             altered_name = altered_name.split("[")[0]
             movie_name = altered_name.split(" (")[0]
             release_year = altered_name.split(" (")[1]
-            release_year = release_year.replace(")", "")
+            release_year = release_year.replace(") ", "")
+            movie_details = MediaManager.__extract_movie_details(movie_name=movie_name)
             # now that we have our movie_name and year in a proper format, we can insert into db
             db_query = """INSERT INTO "movies"
-                           (name, release_year)
-                           VALUES(?,?);
+                           (name, release_year,genre,rating,small_cover_image)
+                           VALUES(?,?,?,?,?);
 """
             # creating tuple
-            data_tuple = (movie_name, release_year)
+            if movie_details == {}:
+                data_tuple = (movie_name, release_year, None, None, None)
+            else:
+                data_tuple = (movie_name, release_year, movie_details['genres'][0], movie_details['rating'], movie_details['small_cover_image'])
             # inserting into DB
             try:
                 cursor.execute(db_query,data_tuple)
                 # appending the name of movie to the movies list for email purposes
-                movies.append(movie_name)
+                # movies.append(movie_name)
+                # appending all details of movie in a Movie object to be returned and later used in email purposes
+                if movie_details == {}:
+                    movies.append(Movie(movie_name=movie_name))
+                else:
+                    movies.append(Movie(movie_name=movie_name, release_year=release_year, genres=movie_details['genres'],
+                                    rating=movie_details['rating'], small_cover_image=movie_details['small_cover_image']))
             except sqlite3.IntegrityError:
                 if verbose:
                     print(f"{self.WARNING}Movie --> {movie_name} already present in DB.")
@@ -613,13 +660,6 @@ CREATE TABLE "movies" (
     def __ce(self, verbose: bool = False, db_name: str = None, movies_list: list = None, 
              tv_shows: TVShow = None, full_name: str = None) -> str:
         # Validations
-        # movies_list = ["Interstellar", "John Wick 2", "Iron Man", "The Day After Tomorrow"]
-        # tv_shows = {
-        #     "Parizaad": [],
-        #     "BOL": [],
-        #     "Meem Se Muhabbat": [],
-        #     "Zindagi Gulzar Hai": []
-        # }
         if not movies_list and not tv_shows:
             return ""
         if not movies_list and tv_shows:

@@ -5,6 +5,7 @@
 import requests
 import os
 from dotenv import load_dotenv
+from .classes import Movie, TVShow
 
 # loading our enviournment
 load_dotenv(dotenv_path="media_manager/.env")
@@ -15,41 +16,9 @@ class MessageGenerator:
     # Methods
 
     @classmethod
-    def extract_movie_details(cls, movie_name: str = None) -> dict:
-      """Returns basic details of the movie. Details are fetched by YTS API.
-
-      Args:
-          movie_name (str, optional): Name of the movie to fetch details of. Defaults to None.
-
-      Returns:
-          dict: Returns the dictionary of basic movie details.
-      """
-
-      movie_details = {}
-      # contructing url
-      url_for_id = f"https://yts.mx/api/v2/list_movies.json?&query_term='{movie_name}"
-      # making request
-      response = requests.get(url=url_for_id)
-      if response.json()["data"]["movie_count"] == 0:
-        # it means this movie is not present in YTS server.
-        return movie_details
-      
-      movie_id = response.json()["data"]["movies"][0]["id"]
-      # now extract basic movie details based on this id
-      url_for_basic_movie_details = f"https://yts.mx/api/v2/movie_details.json?movie_id={movie_id}"
-      # making request
-      response = requests.get(url=url_for_basic_movie_details)
-      movie_details["year"] = response.json()["data"]["movie"]["year"]
-      movie_details["genres"] = response.json()["data"]["movie"]["genres"]
-      movie_details["rating"] = response.json()["data"]["movie"]["rating"]
-      movie_details["small_cover_image"] = response.json()["data"]["movie"]["small_cover_image"]
-
-      return movie_details
-
-    @classmethod
     # no_reply_movies_added
-    def no_reply_movies_added(cls, receiver_name: str, list_of_movies: list
-                              ,tv_shows: dict) -> str:
+    def no_reply_movies_added(cls, receiver_name: str, list_of_movies: Movie
+                              ,tv_shows: TVShow) -> str:
         """
         Returns a message containing the name of the receiver.
         :param receiver_name: Name of the receiver.
@@ -183,13 +152,12 @@ class MessageGenerator:
           <!-- Movies -->
           <div class="section-title">🎬 New Movies Added</div>'''
           for movie in list_of_movies:
-            movie_details = MessageGenerator.extract_movie_details(movie_name=movie)
-            if movie_details == {}:
+            if movie.release_year == None:
                 message = message + '''
               <div class="movie">
                 <img src="#" alt="Avatar 2 Poster">
                 <div class="movie-details">'''
-                message = message + f'''<p class="movie-title">{movie}</p>
+                message = message + f'''<p class="movie-title">{movie.movie_name}</p>
                 <p class="movie-info"></p>
                 </div>
               </div> 
@@ -197,10 +165,10 @@ class MessageGenerator:
             else:
               message = message + f'''
               <div class="movie">
-                <img src="{movie_details['small_cover_image']}" alt="Avatar 2 Poster">
+                <img src="{movie.small_cover_image}" alt="Avatar 2 Poster">
                 <div class="movie-details">'''
-              message = message + f'''<p class="movie-title">{movie}</p>
-                <p class="movie-info"> {movie_details["genres"][0]} | {movie_details["year"]} | Rating: {movie_details["rating"]}</p>
+              message = message + f'''<p class="movie-title">{movie.movie_name}</p>
+                <p class="movie-info"> {movie.genres[0]} | {movie.release_year} | Rating: {movie.rating}</p>
                 </div>
               </div>
             '''

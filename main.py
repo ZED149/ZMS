@@ -44,15 +44,17 @@ if __name__ == "__main__":
 
     # Now need to create and then send emails
     # crawling the directory for new movies
-    movies = o.amtd(False, "media_manager/not_uploaded/movies/", db_name=DB_NAME)
+    movies = o.amtd(False, "E:/media/movies/not watched/", db_name=DB_NAME)
     # crawling the directory for new or updated tv_shows
-    tv_shows = o.nmtatstd(verbosity=False, db_name=DB_NAME, path="test_directory/")
+    tv_shows = o.nmtatstd(verbosity=False, db_name=DB_NAME, path="media_manager/not_uploaded/tv_shows/new/")
     print("Movies: ")
-    print(movies)
+    for movie in movies:
+        print(movie)
     print("TV Shows: ")
     for ts in tv_shows:
         print(ts)
     # creating emails
+    # tv_shows = None
     flag = o.send_emails(verbose=True, db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
     if flag:
         print("Being committed to the DB.")
