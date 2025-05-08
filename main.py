@@ -8,56 +8,35 @@ from dotenv import load_dotenv
 # loading enviournmental variables into our scope
 load_dotenv(dotenv_path="media_manager/.env")
 
-# GLOBAL
+# GLOBAL Variables
 DB_NAME = os.getenv('DB_NAME')
+VERBOSITY = True
+EMAIL_FILE = os.getenv("EMAIL_FILE")
 
 # MAIN
 if __name__ == "__main__":
-    print("Working")
+    print("Script initiated...")
 
-    # Instanciating MediaManager
-    o = MediaManager(db_name=DB_NAME)
+    # Instanciating MediaManager object
+    o = MediaManager(verbosity=VERBOSITY, db_name=DB_NAME, logger_name="Salman Ahmad")
 
     # setting sending email and commiting to DB flag = False
     flag = False
-    
-    # perform this only if flag is True
-    if flag:
-        # creating movies table in the db
-        o.cmtid(DB_NAME)
 
-        # adding all movies to the db
-        o.amtd(True, "media_manager/movies/", DB_NAME)
-
-        # creating tv_shows table in the db
-        o.ctstid(DB_NAME)
-        
-        # adding tv_shows to the db
-        o.atstd(True, "media_manager/tv_shows/", DB_NAME)
-
-        # creating emails table in the db
-        o.cetid(DB_NAME)
-
-        # adding emails to the DB
-        o.aetd(file="emails.xlsx", db_name=DB_NAME)
-
-
-    # Now need to create and then send emails
     # crawling the directory for new movies
-    movies = o.amtd(False, "E:/media/movies/not watched/", db_name=DB_NAME)
+    movies = o.amtd(verbose=True, path="media_manager/not_uploaded/movies/", db_name=DB_NAME)
     # crawling the directory for new or updated tv_shows
-    tv_shows = o.nmtatstd(verbosity=False, db_name=DB_NAME, path="media_manager/not_uploaded/tv_shows/new/")
+    tv_shows = o.nmtatstd(verbosity=True, db_name=DB_NAME, path="media_manager/not_uploaded/tv_shows/updated/")
     print("Movies: ")
     for movie in movies:
         print(movie)
     print("TV Shows: ")
     for ts in tv_shows:
         print(ts)
-    # creating emails
-    # tv_shows = None
+    # sending emails to receipents
     flag = o.send_emails(verbose=True, db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
     if flag:
         print("Being committed to the DB.")
-        o.commit()
+        o.commit(verbosity=True)
     else:
         print("email not send and not committed to the DB.")
