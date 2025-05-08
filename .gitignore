@@ -349,3 +349,6 @@ test_directory/Aye Khuda/Episode 2.txt
 test_directory/Aye Khuda/Episode 3.txt
 test_directory/Aye Khuda/Episode 4.txt
 media_manager/classes/__pycache__/movie.cpython-313.pyc
+media_manager/not_uploaded/
+media_manager/logs/
+media_manager/__pycache__/
