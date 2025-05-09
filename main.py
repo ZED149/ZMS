@@ -10,33 +10,28 @@ load_dotenv(dotenv_path="media_manager/.env")
 
 # GLOBAL Variables
 DB_NAME = os.getenv('DB_NAME')
-VERBOSITY = True
-EMAIL_FILE = os.getenv("EMAIL_FILE")
+VERBOSITY = bool(os.getenv("VERBOSITY"))
+LOGGER_NAME = os.getenv("LOGGER_NAME")
+MOVIES_CRAWLING_PATH = os.getenv("MOVIES_CRAWLING_PATH")
+TV_SHOWS_CRAWLING_PATH = os.getenv("TV_SHOWS_CRAWLING_PATH")
 
 # MAIN
 if __name__ == "__main__":
     print("Script initiated...")
 
     # Instanciating MediaManager object
-    o = MediaManager(verbosity=VERBOSITY, db_name=DB_NAME, logger_name="Salman Ahmad")
-
-    # setting sending email and commiting to DB flag = False
-    flag = False
+    o = MediaManager(verbosity=VERBOSITY, db_name=DB_NAME, logger_name=LOGGER_NAME)
 
     # crawling the directory for new movies
-    movies = o.amtd(verbose=True, path="media_manager/not_uploaded/movies/", db_name=DB_NAME)
+    movies = o.amtd(verbose=True, path=MOVIES_CRAWLING_PATH, db_name=DB_NAME)
     # crawling the directory for new or updated tv_shows
-    tv_shows = o.nmtatstd(verbosity=True, db_name=DB_NAME, path="media_manager/not_uploaded/tv_shows/updated/")
-    print("Movies: ")
-    for movie in movies:
-        print(movie)
-    print("TV Shows: ")
-    for ts in tv_shows:
-        print(ts)
+    tv_shows = o.nmtatstd(verbosity=True, db_name=DB_NAME, path=TV_SHOWS_CRAWLING_PATH)
+
     # sending emails to receipents
     flag = o.send_emails(verbose=True, db_name=DB_NAME, movies_list=movies, tv_shows=tv_shows)
     if flag:
-        print("Being committed to the DB.")
+        # print("Being committed to the DB.")
         o.commit(verbosity=True)
     else:
-        print("email not send and not committed to the DB.")
+        # print("email not send and not committed to the DB.")
+        pass
