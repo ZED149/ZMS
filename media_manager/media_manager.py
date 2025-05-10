@@ -25,6 +25,7 @@ from selenium.webdriver.common.keys import Keys
 from .classes import TVShow, Episode, Movie
 import requests
 from .logging import Logging
+import http.client as httplib
 
 
 class MediaManager:
@@ -39,6 +40,7 @@ class MediaManager:
     __receipents_emails = None
     __logger = None
     __channel_name_scraper_driver = None
+    __db_name = None
 
     # utility functions
     # send_email_core
@@ -49,7 +51,7 @@ class MediaManager:
         msg['From'] = formataddr((str(Header('ZED', 'utf-8')), username))
         msg['To'] = receiver
         # subject [Updates] ZED Media Server
-        msg['Subject'] = "Test Mail 48"
+        msg['Subject'] = "Test Mail 49"
         msg.preamble = "This is a multi-part message in MIME format."
 
         # attaching msgAlternative to the msg
@@ -86,22 +88,36 @@ class MediaManager:
         Returns:
             str: Channel Name.
         """
+        if verbose:
+            self.__logger.write("-------------------------Scrap Channel Name, __scrap_channel_name()-------------------------\n")
+            self.__logger.write("Initializing driver.\n")
         # initializing driver
         self.__channel_name_scraper_driver = uc.Chrome()
+        url = "https://www.youtube.com/"
+        if verbose:
+            self.__logger.write(f"Making request to the url({url}) and fetching frontend code.\n")
         # making request to the url(youtube.com) and fetching frontend code
-        self.__channel_name_scraper_driver.get("https://www.youtube.com/")
-        # searching for drama name (Ae Dil drama) in the search bar and pressing ENTER
+        self.__channel_name_scraper_driver.get(url)
+        if verbose:
+            self.__logger.write(f"Searching for tv_show({tv_show_name}) and sending ENTER keys.\n")
+        # searching for drama name (tv_show_name) in the search bar and pressing ENTER
         self.__channel_name_scraper_driver.find_element(by="xpath", value='/html/body/ytd-app/div[1]/div[2]/ytd-masthead/div[4]/div[2]/yt-searchbox/div[1]/form/input').send_keys(f"{tv_show_name} drama" + Keys.RETURN)
         time.sleep(5)
+        if verbose:
+            self.__logger.write("Scraping channel name.\n")
         # scraping tv channel name for that drama
         channel = self.__channel_name_scraper_driver.find_element(by='xpath', value='/html/body/ytd-app/div[1]/ytd-page-manager/ytd-search/div[1]/ytd-two-column-search-results-renderer/div/ytd-section-list-renderer/div[2]/ytd-item-section-renderer/div[3]/yt-lockup-view-model[1]/div/div/yt-lockup-metadata-view-model/div[1]/div[1]/yt-content-metadata-view-model/div[1]/span[1]/span/a')
         if verbose:
+            self.__logger.write(f"[CHANNEL NAME FOR]: {tv_show_name} is ({channel.text}).\n")
             print(f"[CHANNEL NAME FOR]: {tv_show_name} is ({channel.text}).")
-        # driver._delay = 5
         channel_name =  channel.text
+        if verbose:
+            self.__logger.write("Closing driver.\n")
         # closing driver
         time.sleep(5)
         self.__channel_name_scraper_driver.close()
+        if verbose:
+            self.__logger.write("-------------------------__scrap_channel_name(), DONE-------------------------\n")
         # Return
         return channel_name
     
@@ -116,7 +132,8 @@ class MediaManager:
             dict: Returns the dictionary of basic movie details.
         """
 
-        self.__logger.write("-------------------------Extract Movie Details, __extract_movie_details()-------------------------\n")
+        if verbosity:
+            self.__logger.write("-------------------------Extract Movie Details, __extract_movie_details()-------------------------\n")
         movie_details = {}
         # contructing url
         url_for_id = f"https://yts.mx/api/v2/list_movies.json?&query_term='{movie_name}"
@@ -160,29 +177,158 @@ class MediaManager:
             self.__logger.write("-------------------------extract_movie_details(), DONE-------------------------\n")
         return movie_details
 
+    # check_internet_connectivity
+    def __check_internet_connectivity(self, verbosity: bool = False) -> bool:
+        """Checks the internet connection by making a request to the Youtube.com
+
+        Args:
+            verboseity (bool, optional): Set to True to increase verbosity otherwise False. Defaults to False.
+        Returns:
+            bool: True if request is successful otherwise False.
+        """
+        if verbosity:
+            self.__logger.write("-------------------------Check Internet Connectivity, __check_internet_connectivity()-------------------------\n")
+        url = "www.youtube.com"
+        timeout = 3
+        if verbosity:
+            self.__logger.write(f"Constructing url({url}) with timeout={timeout}\n")
+        try:
+            if verbosity:
+                self.__logger.write("Attempting connection with the server.\n")
+            connection = httplib.HTTPConnection(url, timeout=timeout)
+            if verbosity:
+                self.__logger.write("Sending http request to the url and requesting headers.\n")
+            connection.request("HEAD", "/")
+            if verbosity:
+                self.__logger.write("Closing connection.\n")
+                self.__logger.write("-------------------------__check_internet_connectivity(), DONE-------------------------\n")
+            connection.close()
+            return True
+        except Exception as excep:
+            if verbosity:
+                self.__logger.write("-------------------------__check_internet_connectivity(), DONE-------------------------\n")
+            return False
+
+    # ce (create_email)
+    def __ce(self, verbose: bool = False, db_name: str = None, movies_list: list = None, 
+             tv_shows: TVShow = None, full_name: str = None) -> str:
+        if verbose:
+            self.__logger.write("-------------------------Create Email, __ce()-------------------------\n")
+        # Validations
+        if verbose:
+            self.__logger.write("Performing validations on attributes 'movies_list' and 'tv_shows'.\n")
+        if not movies_list and not tv_shows:
+            if verbose:
+                self.__logger.write("Attributes 'movies_list' and 'tv_shows' are none.\n")
+                self.__logger.write("-------------------------__ce(), DONE-------------------------\n")
+            return ""
+        if not movies_list and tv_shows:
+            if verbose:
+                self.__logger.write("Attribute 'movies_list' is none.\n")
+                self.__logger.write(f"Generating message(email markup) for the user {full_name}\n")
+            message = MessageGenerator.no_reply_movies_added(full_name, movies_list, tv_shows=tv_shows)
+            if verbose:
+                self.__logger.write("-------------------------__ce(), DONE-------------------------\n")
+            return message
+        if not tv_shows and movies_list:
+            if verbose:
+                self.__logger.write("Attribute 'tv_shows' is none.\n")
+                self.__logger.write(f"Generating message(email markup) for the user {full_name}\n")
+            message = MessageGenerator.no_reply_movies_added(full_name, movies_list, tv_shows=tv_shows)
+            if verbose:
+                self.__logger.write("-------------------------__ce(), DONE-------------------------\n")
+            return message
+        if verbose:
+            self.__logger.write("Attributes 'movies_list' and 'tv_shows' both are VALID.\n")
+            self.__logger.write(f"Generating message(email_markup) for the user {full_name}\n")
+        message = MessageGenerator.no_reply_movies_added(full_name, movies_list, tv_shows=tv_shows)
+        if verbose:
+            self.__logger.write("-------------------------__ce(), DONE-------------------------\n")
+        return message
+    
+    # __se (send_email)
+    def __se(self, verbosity: bool=False, message: str = None, receiver_email: str = None) -> bool:
+        """Sends an email to the receiver's. Receipent(s) are fetched from the DB. In order to add
+        more receipent(s) to the server, use aetd() method.
+
+        Args:
+            message (str, optional): Contains the HTML format of message to be sent. Defaults to None.
+        """
+        if verbosity:
+            self.__logger.write("-------------------------Send Email, __se()-------------------------\n")
+        # Validations
+        if verbosity:
+            self.__logger.write("Performing validation on the attribute 'message'\n")
+        if message:
+            host = "smtpout.secureserver.net"
+            port = 465
+
+            username = "no-reply@zed149.com"
+            password = "NFAKisAlive@123"
+
+            context = ssl.create_default_context()
+            # core functionality to send email
+            if verbosity:
+                self.__logger.write("Sending email to ({username})\n")
+            self.__send_email_core(username, receiver_email, message, host, port, password, context)
+            if verbosity:
+                self.__logger.write("Email successfully sent.\n")
+                self.__logger.write("-------------------------__se(), DONE-------------------------\n")
+            return True
+        else:
+            if verbosity:
+                self.__logger.write("Attribute 'message' cannot be none.\n")
+            self.__logger.write("-------------------------__se(), DONE-------------------------\n")
+            return False
+        
     # private data mambers
     # constructor
-    def __init__(self, verbosity:bool = False, db_name: str = None, logger_name: str = None):
-        # connecting to the DB
-        self.conn = sqlite3.connect(db_name)
-        # fetch customer emails here
-        cursor = self.conn.cursor()
-        # query to fetch all emails from db
-        query = '''
-SELECT email, full_name from emails
-'''
-        try:
-            cursor.execute(query)
-            self.__receipents_emails = cursor.fetchall()
-        except:
-            pass
+    def __init__(self, verbosity:bool = False, db_name: str = None, logger_name: str = None) -> None:
+        # assigning db_name to private data member
+        self.__db_name = db_name
         # initializing Logger
         if logger_name:
             self.__logger = Logging(logger_name=logger_name)
             self.__logger.log_starting_details_to_file()
-
-    # methods
-
+        if verbosity:
+            self.__logger.write("-------------------------Constructor, __init__()-------------------------\n")
+        if verbosity:
+            self.__logger.write("Checking internet connectivity.\n")
+        # checking internet connection before proceeding.
+        connected = self.__check_internet_connectivity(verbosity=verbosity)
+        if connected:
+            if verbosity:
+                self.__logger.write("Connection successful.\n")
+                self.__logger.write("Can proceed the script.\nInitializing private data members and preparing context.\n")
+            if verbosity:
+                self.__logger.write(f"Connecting to the Database ({db_name}).\n")
+            # connecting to the DB
+            self.conn = sqlite3.connect(db_name)
+            if verbosity:
+                self.__logger.write("Acquiring cursor.\n")
+            # fetch customer emails here
+            cursor = self.conn.cursor()
+            # query to fetch all emails from db
+            query = '''SELECT email, full_name 
+                        FROM emails'''
+            try:
+                if verbosity:
+                    self.__logger.write("Executing query to fetch emails from DB and store them in __receipent_emails.\n")
+                cursor.execute(query)
+                self.__receipents_emails = cursor.fetchall()
+                if verbosity:
+                    self.__logger.write("Query successful.\n")
+                    self.__logger.write("-------------------------__init__(), DONE-------------------------")
+            except:
+                if verbosity:
+                    self.__logger.write("-------------------------__init__(), DONE-------------------------")
+        else:
+            self.__logger.write("Connection not successful.\n")
+            self.__logger.write("Terminating script.\n")
+            self.__logger.write("-------------------------__init__(), DONE-------------------------")
+            exit(0)
+    
+    # Methods
     # cmtid (create_movies_table_in_db)
     def cmtid(self, verbosity: bool = False, db_name: str = None):
         """creates a movies table in the db provided.
@@ -676,7 +822,7 @@ CREATE TABLE "movies" (
             flag = self.__se(message=message, receiver_email=receipent[0])
             if verbose and flag:    # if verbosity is enabled and email is being sent
                 # print(f"[EMAIL SENT]: to {receipent[1].capitalize()} @ {receipent[0]}")
-                self.__logger.write("[EMAIL SENT]: to {receipent[1].capitalize()} @ {receipent[0]}\n")
+                self.__logger.write(f"[EMAIL SENT]: to {receipent[1].capitalize()} @ {receipent[0]}\n")
             if not flag:    # if verbosity is enabled but the email is not sent due to some reason
                 if verbose:
                     # print(f"[EMAIL NOT SENT]: to {receipent[1].capitalize()} @ {receipent[0]}")
@@ -685,78 +831,6 @@ CREATE TABLE "movies" (
                 return False
         self.__logger.write("-------------------------send_emails(), DONE-------------------------\n")
         return True
-
-    # __se (send_email)
-    def __se(self, verbosity: bool=False, message: str = None, receiver_email: str = None) -> bool:
-        """Sends an email to the receiver's. Receipent(s) are fetched from the DB. In order to add
-        more receipent(s) to the server, use aetd() method.
-
-        Args:
-            message (str, optional): Contains the HTML format of message to be sent. Defaults to None.
-        """
-        if verbosity:
-            self.__logger.write("-------------------------Send Email, __se()-------------------------\n")
-        # Validations
-        if verbosity:
-            self.__logger.write("Performing validation on the attribute 'message'\n")
-        if message:
-            host = "smtpout.secureserver.net"
-            port = 465
-
-            username = "no-reply@zed149.com"
-            password = "NFAKisAlive@123"
-
-            context = ssl.create_default_context()
-            # core functionality to send email
-            if verbosity:
-                self.__logger.write("Sending email to ({username})\n")
-            self.__send_email_core(username, receiver_email, message, host, port, password, context)
-            if verbosity:
-                self.__logger.write("Email successfully sent.\n")
-                self.__logger.write("-------------------------__se(), DONE-------------------------\n")
-            return True
-        else:
-            if verbosity:
-                self.__logger.write("Attribute 'message' cannot be none.\n")
-            self.__logger.write("-------------------------__se(), DONE-------------------------\n")
-            return False
-
-    # ce (create_email)
-    def __ce(self, verbose: bool = False, db_name: str = None, movies_list: list = None, 
-             tv_shows: TVShow = None, full_name: str = None) -> str:
-        if verbose:
-            self.__logger.write("-------------------------Create Email, __ce()-------------------------\n")
-        # Validations
-        if verbose:
-            self.__logger.write("Performing validations on attributes 'movies_list' and 'tv_shows'.\n")
-        if not movies_list and not tv_shows:
-            if verbose:
-                self.__logger.write("Attributes 'movies_list' and 'tv_shows' are none.\n")
-                self.__logger.write("-------------------------__ce(), DONE-------------------------\n")
-            return ""
-        if not movies_list and tv_shows:
-            if verbose:
-                self.__logger.write("Attribute 'movies_list' is none.\n")
-                self.__logger.write(f"Generating message(email markup) for the user {full_name}\n")
-            message = MessageGenerator.no_reply_movies_added(full_name, movies_list, tv_shows=tv_shows)
-            if verbose:
-                self.__logger.write("-------------------------__ce(), DONE-------------------------\n")
-            return message
-        if not tv_shows and movies_list:
-            if verbose:
-                self.__logger.write("Attribute 'tv_shows' is none.\n")
-                self.__logger.write(f"Generating message(email markup) for the user {full_name}\n")
-            message = MessageGenerator.no_reply_movies_added(full_name, movies_list, tv_shows=tv_shows)
-            if verbose:
-                self.__logger.write("-------------------------__ce(), DONE-------------------------\n")
-            return message
-        if verbose:
-            self.__logger.write("Attributes 'movies_list' and 'tv_shows' both are VALID.\n")
-            self.__logger.write(f"Generating message(email_markup) for the user {full_name}\n")
-        message = MessageGenerator.no_reply_movies_added(full_name, movies_list, tv_shows=tv_shows)
-        if verbose:
-            self.__logger.write("-------------------------__ce(), DONE-------------------------\n")
-        return message
 
     # commit
     def commit(self, verbosity: bool=False):
@@ -769,3 +843,35 @@ CREATE TABLE "movies" (
         self.conn.close()
         if verbosity:
             self.__logger.write("-------------------------commit(), DONE-------------------------\n")
+
+    # proceed
+    def proceed(self, verbosity: bool = False, crawling_path_movies: str = None, crawling_path_tv_shows: str = None) -> None:
+        """Proceed the script for the user. User just needs to provide the directory paths for the movies and tv_shows to crawl from.
+
+        Args:
+            verbosity (bool, optional): Set to True to increase output else False. Defaults to False.
+            crawling_path_movies (str, optional): Directory path for the movies to add/look/crawl from. Defaults to None.
+            crawling_path_tv_shows (str, optional): Directory path for the tv_shows to add/look/crawl from. Defaults to None.
+        """
+        if verbosity:
+            self.__logger.write("-------------------------Proceed, proceed()-------------------------\n")
+            self.__logger.write(f"Fetching 'movies' from the crawling_path={crawling_path_movies}.\n")
+        movies = self.amtd(verbose=verbosity, path=crawling_path_movies, db_name=self.__db_name)
+        if verbosity:
+            self.__logger.write("Movies fetched successfully.\n")
+            self.__logger.write(f"Fetching tv_shows from the crawling_path={crawling_path_tv_shows}.\n")
+        tv_shows = self.nmtatstd(verbosity=verbosity, path=crawling_path_tv_shows, db_name=self.__db_name)
+        if verbosity:
+            self.__logger.write("Tv Show fetched successfully.\n")
+            self.__logger.write("Preparing to send emails to the receipents.\n")
+        email_flag = self.send_emails(verbose=verbosity, db_name=self.__db_name, movies_list=movies, tv_shows=tv_shows)
+        if verbosity:
+            self.__logger.write(f"EMAIL_FLAG={email_flag}.\n")
+        if email_flag:
+            self.__logger.write("Email sent successfully.\nNow commiting changes to the DB.\n")
+            self.commit(verbosity=verbosity)
+            self.__logger.write("Commiting changes done.\n")
+        else:
+            self.__logger.write("Email not sent.\n")
+        if verbosity:
+            self.__logger.write("-------------------------proceed(), DONE-------------------------\n")

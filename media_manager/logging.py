@@ -62,7 +62,8 @@ class Logging:
     # log_starting_details_to_file
     def log_starting_details_to_file(self) -> None:
         # logging details to file
-        message = f'AUTHOR: {self.logger_name}\n'
+        message = f"Logger initialized with the name -> {self.logger_name}.\n"
+        message = message + f'AUTHOR: {self.logger_name}\n'
         message = message + f'Created at: {self.format_now()},\t(Year, Month, Date)\n'
         self.__fd.write(message)
 
