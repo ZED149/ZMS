@@ -26,6 +26,7 @@ from .classes import TVShow, Episode, Movie
 import requests
 from .logging import Logging
 import http.client as httplib
+import shutil
 
 
 class MediaManager:
@@ -41,8 +42,52 @@ class MediaManager:
     __logger = None
     __channel_name_scraper_driver = None
     __db_name = None
+    __MASTER_PATH_MOVIES = None
+    __MASTER_PATH_TV_SHOWS = None
 
     # utility functions
+    # move_movies_and tv_shows
+    def __move_media(self, verbosity: bool = False, movies_from_path: str = None, tv_shows_from_path: str = None):
+        """Move movies and tv_shows from their crawling paths to the Master path.
+
+        Args:
+            movies_from_path (str, optional): Path from movies are to be moved. Defaults to None.
+            tv_shows_from_path (str, optional): Path from where tv_shows are to be moved. Defaults to None.
+        """
+        if verbosity:
+            self.__logger.write("-------------------------Move Media, __move_media()-------------------------\n")
+
+        if verbosity:
+            self.__logger.write("Moving Movies:\n")
+        # moving movies
+        for movie in os.scandir(path=movies_from_path):
+            if verbosity:
+                self.__logger.write(f"Moving Movie=({movie.path}) TO dst=({self.__MASTER_PATH_MOVIES}).\n")
+            shutil.move(src=movie.path, dst=self.__MASTER_PATH_MOVIES, copy_function=shutil.copytree)   # move files recursively
+
+        if verbosity:
+            self.__logger.write("Moving movies DONE.\n")
+            self.__logger.write("Moving TV Shows:\n")
+        # moving tv_shows
+        for tv_show in os.scandir(path=tv_shows_from_path):
+            if verbosity:
+                self.__logger.write(f"Moving TV_SHOW=({tv_show.path}) TO dst=({self.__MASTER_PATH_TV_SHOWS}).\n")
+            try:    
+                shutil.move(src=tv_show.path, dst=self.__MASTER_PATH_TV_SHOWS, copy_function=shutil.copytree)
+            except shutil.Error:
+                if verbosity:
+                    self.__logger.write(f"Tv_Show dst='{self.__MASTER_PATH_TV_SHOWS}' already exists. Copying each episode 1 by 1 now.\n")
+                    # it means that a directory for that tv_show already exists, now we will iterate on that tv_show
+                    # to move each episode 1 by 1
+                    for episode in os.scandir(path=tv_show.path):
+                        if verbosity:
+                            self.__logger.write(f"Moving episode='{episode.path}' to dst='{self.__MASTER_PATH_TV_SHOWS + tv_show.name + '/'}'.\n")
+                        shutil.move(src=episode.path, dst=self.__MASTER_PATH_TV_SHOWS + tv_show.name + '/')
+
+        if verbosity:
+            self.__logger.write("Moving tv_shows DONE.\n")
+            self.__logger.write("-------------------------__move_media(), DONE-------------------------\n")
+
     # send_email_core
     def __send_email_core(self, username: str, receiver: str,
                         message: str, host: str, port: int,
@@ -51,7 +96,7 @@ class MediaManager:
         msg['From'] = formataddr((str(Header('ZED', 'utf-8')), username))
         msg['To'] = receiver
         # subject [Updates] ZED Media Server
-        msg['Subject'] = "Test Mail 49"
+        msg['Subject'] = "Test Mail 54"
         msg.preamble = "This is a multi-part message in MIME format."
 
         # attaching msgAlternative to the msg
@@ -286,6 +331,9 @@ class MediaManager:
     def __init__(self, verbosity:bool = False, db_name: str = None, logger_name: str = None) -> None:
         # assigning db_name to private data member
         self.__db_name = db_name
+        self.__MASTER_PATH_MOVIES = os.getenv("MASTER_PATH_MOVIES")
+        self.__MASTER_PATH_TV_SHOWS = os.getenv("MASTER_PATH_TV_SHOWS")
+
         # initializing Logger
         if logger_name:
             self.__logger = Logging(logger_name=logger_name)
@@ -621,7 +669,7 @@ CREATE TABLE "movies" (
                     episode_name = re.search(r"Ep[ -_#@]\d{0,3}|Episode[ -_#@]{,3}\d{0,3}|Last[ -_#]{,3}Episode|2nd[ -_#@]{,3}Last Episode[ -_#@]{,3}\d{0,3}", episode.name).group()
                     data_tuple = (episode_name, tv_show_id, time.ctime(episode.stat().st_birthtime))
                     if verbosity:
-                        self.__logger.write(f"Attempting to insert episodes now ({episode.name}).\n")
+                        self.__logger.write(f"Attempting to insert episodes now ({episode_name}).\n")
                     cursor.execute(query, data_tuple)
                     a[e.name].append(episode_name)
                     # adding to the dict that will be used for email purposes
@@ -865,13 +913,24 @@ CREATE TABLE "movies" (
             self.__logger.write("Tv Show fetched successfully.\n")
             self.__logger.write("Preparing to send emails to the receipents.\n")
         email_flag = self.send_emails(verbose=verbosity, db_name=self.__db_name, movies_list=movies, tv_shows=tv_shows)
+        # email_flag = True
         if verbosity:
             self.__logger.write(f"EMAIL_FLAG={email_flag}.\n")
-        if email_flag:
-            self.__logger.write("Email sent successfully.\nNow commiting changes to the DB.\n")
+        if email_flag:  # if email is sent
+            if verbosity:
+                self.__logger.write("Email sent successfully.\nNow commiting changes to the DB.\n")
             self.commit(verbosity=verbosity)
-            self.__logger.write("Commiting changes done.\n")
-        else:
-            self.__logger.write("Email not sent.\n")
+            if verbosity:
+                self.__logger.write("Commiting changes done.\n")
+                self.__logger.write(f"Now, moving movies=({crawling_path_movies}) and tv_shows=({crawling_path_tv_shows}).\n")
+            self.__move_media(verbosity=verbosity, movies_from_path=crawling_path_movies, 
+                              tv_shows_from_path=crawling_path_tv_shows)
+            if verbosity:
+                self.__logger.write("Moving movies and tv_shows successful.\n")
+        else:   # if email is not sent
+            if verbosity:
+                self.__logger.write("Email not sent.\n")
+            pass
         if verbosity:
             self.__logger.write("-------------------------proceed(), DONE-------------------------\n")
+            self.__logger.write("Closing Script...\n")
