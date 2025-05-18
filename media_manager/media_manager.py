@@ -19,14 +19,14 @@ from email.utils import formataddr
 from email.header import Header
 import re
 import time
-from warnings import deprecated
 import undetected_chromedriver as uc
 from selenium.webdriver.common.keys import Keys
 from .classes import TVShow, Episode, Movie
 import requests
-from .logging import Logging
+from .classes.logging import Logging
 import http.client as httplib
 import shutil
+from .classes.mail_handling import MailHandling
 
 
 class MediaManager:
@@ -44,6 +44,7 @@ class MediaManager:
     __db_name = None
     __MASTER_PATH_MOVIES = None
     __MASTER_PATH_TV_SHOWS = None
+    __Mail_Handler = MailHandling()
 
     # utility functions
     # move_movies_and tv_shows
@@ -63,7 +64,10 @@ class MediaManager:
         for movie in os.scandir(path=movies_from_path):
             if verbosity:
                 self.__logger.write(f"Moving Movie=({movie.path}) TO dst=({self.__MASTER_PATH_MOVIES}).\n")
-            shutil.move(src=movie.path, dst=self.__MASTER_PATH_MOVIES, copy_function=shutil.copytree)   # move files recursively
+                try:
+                    shutil.move(src=movie.path, dst=self.__MASTER_PATH_MOVIES, copy_function=shutil.copytree)   # move files recursively
+                except Exception as excep:
+                    self.__logger.write(f"Cannot move {movie} to dst=({self.__MASTER_PATH_MOVIES}). Both on different disks.\n")
 
         if verbosity:
             self.__logger.write("Moving movies DONE.\n")
@@ -87,41 +91,6 @@ class MediaManager:
         if verbosity:
             self.__logger.write("Moving tv_shows DONE.\n")
             self.__logger.write("-------------------------__move_media(), DONE-------------------------\n")
-
-    # send_email_core
-    def __send_email_core(self, username: str, receiver: str,
-                        message: str, host: str, port: int,
-                        password: str, context) -> None:
-        msg = MIMEMultipart('related')
-        msg['From'] = formataddr((str(Header('ZED', 'utf-8')), username))
-        msg['To'] = receiver
-        # subject [Updates] ZED Media Server
-        msg['Subject'] = "Test Mail 54"
-        msg.preamble = "This is a multi-part message in MIME format."
-
-        # attaching msgAlternative to the msg
-        msgAlternative = MIMEMultipart('alternative')
-        msg.attach(msgAlternative)
-
-        # attaching message to the msgAlternative
-        msgText = MIMEText(message, 'html')
-        msgAlternative.attach(msgText)
-
-        # opening image in binary
-        with open('C:\\Users\\salma\\OneDrive\\Desktop\\Media_Manager\\media_manager\\test.png', 'rb') as fb:
-            msgImage = MIMEImage(fb.read(), _subtype='png')
-        
-        del msgImage['Content-Disposition']
-        msgImage.add_header('Content-Disposition', 'inline')
-        msgImage.add_header('Content-ID', '<image1>')
-        msgImage.add_header('X-Attachment-Id', 'image1')  # optional but may help
-
-        msg.attach(msgImage)
-
-        # send email    
-        with smtplib.SMTP_SSL(host, port, context=context) as server:
-            server.login(username, password)
-            server.sendmail(username, receiver, msg.as_string())
 
     # scrap_channel_name
     def __scrap_channel_name(self, verbose: bool = False, tv_show_name: str = None) -> str:
@@ -291,40 +260,12 @@ class MediaManager:
             self.__logger.write("-------------------------__ce(), DONE-------------------------\n")
         return message
     
-    # __se (send_email)
-    def __se(self, verbosity: bool=False, message: str = None, receiver_email: str = None) -> bool:
         """Sends an email to the receiver's. Receipent(s) are fetched from the DB. In order to add
         more receipent(s) to the server, use aetd() method.
 
         Args:
             message (str, optional): Contains the HTML format of message to be sent. Defaults to None.
         """
-        if verbosity:
-            self.__logger.write("-------------------------Send Email, __se()-------------------------\n")
-        # Validations
-        if verbosity:
-            self.__logger.write("Performing validation on the attribute 'message'\n")
-        if message:
-            host = "smtpout.secureserver.net"
-            port = 465
-
-            username = "no-reply@zed149.com"
-            password = "NFAKisAlive@123"
-
-            context = ssl.create_default_context()
-            # core functionality to send email
-            if verbosity:
-                self.__logger.write("Sending email to ({username})\n")
-            self.__send_email_core(username, receiver_email, message, host, port, password, context)
-            if verbosity:
-                self.__logger.write("Email successfully sent.\n")
-                self.__logger.write("-------------------------__se(), DONE-------------------------\n")
-            return True
-        else:
-            if verbosity:
-                self.__logger.write("Attribute 'message' cannot be none.\n")
-            self.__logger.write("-------------------------__se(), DONE-------------------------\n")
-            return False
         
     # private data mambers
     # constructor
@@ -863,21 +804,19 @@ CREATE TABLE "movies" (
                 self.__logger.write(f"Constructing message (email markup) for the receipent ({receipent}).\n")
             message = self.__ce(verbose=verbose, db_name=db_name, movies_list=movies_list, tv_shows=tv_shows, 
                                 full_name=receipent[1])
-            # email is sent by using the .__se() method, it receives message markup and user name for the receipent
             if verbose:
-                # print(f"[SENDING EMAIL]: to {receipent[1].capitalize()} @ {receipent[0]}")
                 self.__logger.write(f"[SENDING EMAIL]: to {receipent[1].capitalize()} @ {receipent[0]}\n")
-            flag = self.__se(message=message, receiver_email=receipent[0])
+            flag = self.__Mail_Handler.send_email(verbose=verbose, logger=self.__logger,
+                                                  message=message, receiver_email=receipent[0])
             if verbose and flag:    # if verbosity is enabled and email is being sent
-                # print(f"[EMAIL SENT]: to {receipent[1].capitalize()} @ {receipent[0]}")
                 self.__logger.write(f"[EMAIL SENT]: to {receipent[1].capitalize()} @ {receipent[0]}\n")
             if not flag:    # if verbosity is enabled but the email is not sent due to some reason
                 if verbose:
-                    # print(f"[EMAIL NOT SENT]: to {receipent[1].capitalize()} @ {receipent[0]}")
                     self.__logger.write(f"[EMAIL NOT SENT]: to {receipent[1].capitalize()} @ {receipent[0]}\n")
                 self.__logger.write("-------------------------send_emails(), DONE-------------------------\n")
                 return False
-        self.__logger.write("-------------------------send_emails(), DONE-------------------------\n")
+        if verbose:
+            self.__logger.write("-------------------------send_emails(), DONE-------------------------\n")
         return True
 
     # commit
