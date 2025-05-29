@@ -356,3 +356,7 @@ to/
 media_manager/classes/__pycache__/mail_handling.cpython-313.pyc
 media_manager/classes/__pycache__/logging.cpython-313.pyc
 media_manager/.env_linux
+media.db
+cw/
+media_manager/classes/__pycache__/*
+TODO
