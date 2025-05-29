@@ -7,16 +7,10 @@ import sqlite3
 import os
 import glob
 from .message_generator import MessageGenerator
-import ssl
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 import pandas as pd
 from dotenv import load_dotenv
 from media_manager.message_generator import MessageGenerator
-from email.mime.image import MIMEImage
 from email.utils import formataddr
-from email.header import Header
 import re
 import time
 import undetected_chromedriver as uc
@@ -27,6 +21,9 @@ from .classes.logging import Logging
 import http.client as httplib
 import shutil
 from .classes.mail_handling import MailHandling
+import os
+import subprocess
+from datetime import datetime
 
 
 class MediaManager:
@@ -45,8 +42,37 @@ class MediaManager:
     __MASTER_PATH_MOVIES = None
     __MASTER_PATH_TV_SHOWS = None
     __Mail_Handler = MailHandling()
+    __MOVIES_CRAWLING_PATH = None
+    __TV_SHOWS_CRAWLING_PATH = None
 
     # utility functions
+
+    # get_creation_time
+    def __get_creation_time(self, file_path: str = None) -> str:
+    # Use stat to try to get birth time (%w)
+        try:
+            result = subprocess.run(
+                ["stat", "-c", "%w", file_path],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            creation_time = result.stdout.strip()
+            if creation_time == "-" or creation_time == "":
+                return None
+            else:
+                # Strip timezone and nanoseconds, parse datetime
+                creation_time = creation_time.split("+")[0].split(".")[0]
+                dt = datetime.strptime(creation_time, "%Y-%m-%d %H:%M:%S")
+                creation_time = dt.isoformat()
+                return creation_time
+        except subprocess.CalledProcessError:
+            return None
+        
+    # get_modification_time
+    def __get_modification_time(self, file_path: str = None) -> str:
+        return datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat()
+    
     # move_movies_and tv_shows
     def __move_media(self, verbosity: bool = False, movies_from_path: str = None, tv_shows_from_path: str = None):
         """Move movies and tv_shows from their crawling paths to the Master path.
@@ -390,11 +416,11 @@ CREATE TABLE "movies" (
         movies = []
         # iterating on the given path and adding them to the db_name
         for dir_name in glob.glob(path + "*"):
-            altered_name = dir_name.split("\\")[1]
+            altered_name = dir_name.split("/")[4]
             altered_name = altered_name.split("[")[0]
             movie_name = altered_name.split(" (")[0]
-            release_year = altered_name.split(" (")[1]
-            release_year = release_year.replace(") ", "")
+            release_year = altered_name.split("(")[1]
+            release_year = release_year.replace(")", "")
             if verbose:
                 self.__logger.write(f"[EXTRACTING MOVIE DETAILS]: of ({movie_name}).\n")
             # try to insert movie into DB. If an exception occurs it means the movie is alreay present in the DB.
@@ -573,8 +599,8 @@ CREATE TABLE "movies" (
                 (tv_show_name, created_date, last_modified_date, channel_name)
                 VALUES (?,?,?,?);
 '''
-                created_date = time.ctime(e.stat().st_birthtime)
-                last_modified_date = time.ctime(e.stat().st_mtime)
+                created_date = self.__get_creation_time(self.__TV_SHOWS_CRAWLING_PATH + e.name)     # /media/from/tv_shows/ + Ae Dil
+                last_modified_date = self.__get_modification_time(self.__TV_SHOWS_CRAWLING_PATH + e.name)                           # /media/from/tv_shows/ + Ae Dil
 
                 data_tuple = (e.name, created_date, last_modified_date, channel_name)
                 if verbosity:
@@ -608,7 +634,7 @@ CREATE TABLE "movies" (
                     VALUES (?,?,?);
 '''
                     episode_name = re.search(r"Ep[ -_#@]\d{0,3}|Episode[ -_#@]{,3}\d{0,3}|Last[ -_#]{,3}Episode|2nd[ -_#@]{,3}Last Episode[ -_#@]{,3}\d{0,3}", episode.name).group()
-                    data_tuple = (episode_name, tv_show_id, time.ctime(episode.stat().st_birthtime))
+                    data_tuple = (episode_name, tv_show_id, self.__get_creation_time(self.__TV_SHOWS_CRAWLING_PATH + e.name + '/' + episode.name))     # /media/from/tv_shows/ + Ae Dil/ + episode1.mp4
                     if verbosity:
                         self.__logger.write(f"Attempting to insert episodes now ({episode_name}).\n")
                     cursor.execute(query, data_tuple)
@@ -653,18 +679,18 @@ CREATE TABLE "movies" (
                 for episode in os.scandir(path=e.path): # for each episode of that tv_show
                     episode_name = re.search(r"Ep[ -_#@]\d{0,3}|Episode[ -_#@]{,3}\d{0,3}|Last[ -_#]{,3}Episode|2nd[ -_#@]{,3}Last Episode[ -_#@]{,3}\d{0,3}", episode.name).group()
                     if episode_name not in episodes:    # if current_episode is not present in already fethced episodes
-                        # append to list if that episode is already not present in db
-                        a[episode_name] = time.ctime(episode.stat().st_birthtime)
+                        # append to list with name as its key and birth_time as its value, if that episode is already not present in db
+                        a[episode_name] = self.__get_creation_time(self.__TV_SHOWS_CRAWLING_PATH + e.name + '/' + episode.name)
                         # also appending it to the episodes_list for that tv_show
                         episodes_list.append(Episode(episode_name=episode_name, 
-                                                     created_date=time.ctime(episode.stat().st_birthtime)))
+                                                     created_date=self.__get_creation_time(self.__TV_SHOWS_CRAWLING_PATH + e.name + '/' + episode.name)))
                         # query to insert episode along with its details into the db
                         query = '''
                         INSERT INTO "episodes"
                         (episode_name, tv_show_id, created_date)
                         VALUES(?,?,?);
                         '''
-                        data_tuple = (episode_name, tv_show_id, time.ctime(episode.stat().st_birthtime))
+                        data_tuple = (episode_name, tv_show_id, self.__get_creation_time(self.__TV_SHOWS_CRAWLING_PATH + e.name + '/' + episode.name))
                         if verbosity:
                             self.__logger.write(f"Attemtping to insert episode in the tv_show ({e.name}).\n")
                         cursor.execute(query, data_tuple)
@@ -693,7 +719,7 @@ CREATE TABLE "movies" (
                     # appending a TVShow object to the tv_show_list to be further used in email purpose
                     tv_shows_list.append(TVShow(tv_show_id=tv_show_id, tv_show_name=e.name,
                                                 channel_name=channel_name, episodes=episodes_list,
-                                                created_date=time.ctime(episode.stat().st_birthtime)))
+                                                created_date=self.__get_creation_time(self.__TV_SHOWS_CRAWLING_PATH + e.name + '/' + episode.name)))
                     # setting the UPDATED_TV_Show to True to check either tv_shows were updated or not
                     tv_shows_list[0].UPDATED_TV_SHOWS = True
                 # controllig output with verbosity statements
@@ -840,6 +866,8 @@ CREATE TABLE "movies" (
             crawling_path_movies (str, optional): Directory path for the movies to add/look/crawl from. Defaults to None.
             crawling_path_tv_shows (str, optional): Directory path for the tv_shows to add/look/crawl from. Defaults to None.
         """
+        self.__MOVIES_CRAWLING_PATH = crawling_path_movies
+        self.__TV_SHOWS_CRAWLING_PATH = crawling_path_tv_shows
         if verbosity:
             self.__logger.write("-------------------------Proceed, proceed()-------------------------\n")
             self.__logger.write(f"Fetching 'movies' from the crawling_path={crawling_path_movies}.\n")
