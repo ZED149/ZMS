@@ -20,6 +20,7 @@ EMAIL_FILE = os.getenv("EMAIL_FILE")
 # MAIN
 if __name__ == "__main__":
     print("Script initiated...")
+    print(f"DB NAME: {DB_NAME}")
 
     # Instanciating MediaManager object
     o = MediaManager(verbosity=VERBOSITY, db_name=DB_NAME, logger_name="Salman Ahmad")
