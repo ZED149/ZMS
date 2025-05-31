@@ -78,7 +78,7 @@ class MailHandling:
             server.sendmail(cls.__s_FROM, receiver, msg.as_string())
 
     # send_email()
-    def send_email(self, verbose: bool = True, logger = None, message: str = None, 
+    def send_email(self, verbose: bool = False, logger = None, message: str = None, 
                    receiver_email: str = None) -> bool:
         """_summary_
 
