@@ -24,9 +24,10 @@ from .classes.mail_handling import MailHandling
 import os
 import subprocess
 from datetime import datetime
+from .admin import Admin, E_Channel
 
 
-class MediaManager:
+class MediaManager(Admin):
     """Used in handling media related items.
     """
 
@@ -590,7 +591,16 @@ CREATE TABLE "movies" (
                 if verbosity:
                     print(f"[CHANNEL NAME]: --> {e.name}")
                     self.__logger.write(f"Attempting to scrap channel name for the tv_show ({e.name})\n")
-                channel_name = self.__scrap_channel_name(verbose=verbosity, tv_show_name=e.name)
+                try:
+                    channel_name = self.__scrap_channel_name(verbose=verbosity, tv_show_name=e.name)
+                except Exception as excep:
+                    if verbosity:
+                        self.__logger.write("Exception occurred. Exiting program.\nSending details to the admin.")
+                    self.notify_admin(verbose=verbosity, channel=E_Channel.email, excep=excep, logger=self.__logger)
+                    self.conn.close()
+                    self.__logger.write("-------------------------nmtatstd(), DONE-------------------------\n")
+                    exit(0)
+
                 if verbosity:
                     self.__logger.write("Scraping done.\n")
                 # inserting tv_show for that name

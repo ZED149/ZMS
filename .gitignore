@@ -15,3 +15,4 @@ media_manager/.env_linux
 media.db
 TODO
 media_manager/admin/__pycache__
+emails.html
