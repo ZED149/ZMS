@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 import os
 
 # loading enviourmnetal variables into our code
-load_dotenv(dotenv_path='media_manager/.env')
+load_dotenv(dotenv_path='ZMS/.env')
 
 # Log class
 class Logging:

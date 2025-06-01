@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from .classes import Movie, TVShow
 
 # loading our enviournment
-load_dotenv(dotenv_path="media_manager/.env")
+load_dotenv(dotenv_path="ZMS/.env")
 
 class MessageGenerator:
   # Private data members

@@ -8,7 +8,11 @@ from enum import Enum
 from ..message_generator import MessageGenerator
 from ..classes import MailHandling
 from ..classes import Logging
+from os import getenv
+from dotenv import load_dotenv
 
+# loading enviournmental variables into our scope
+load_dotenv(dotenv_path='ZMS/.env')
 
 class E_Channel(Enum):
     email = 1
@@ -19,7 +23,6 @@ class Admin:
     """
     Contains methods that are required for an admin class to perform administrative tasks
     """
-
     # utility functions
 
     # perform_assertions
@@ -39,9 +42,10 @@ class Admin:
     # data members
     # private
 
-    __a_name = None         # Name of the Admin
-    __a_email = None        # Email of the Admin
-    __a_password = None     # Password for the account
+    __a_name = None                             # Name of the Admin
+    __a_email = None                            # Email of the Admin
+    __a_password = None                         # Password for the account
+    __OWNER_EMAIL = getenv("OWNER_EMAIL")       # Email for the owner to be notified
 
     # constructor
     def __init__(self, a_name, a_email, a_password):
@@ -81,7 +85,7 @@ class Admin:
                 logger.write("Message generation successful\n")
                 logger.write("Sending email\n")
             se = MailHandling()
-            se.send_email(message=message, receiver_email='salmanahmad111499@gmail.com',
+            se.send_email(message=message, receiver_email=self.__OWNER_EMAIL,
                           verbose=True, logger=logger, sender_email=self.__a_email,
                           sender_password=self.__a_password, sender_name=self.__a_name,
                           email_subject='[ZMS] Error During Execution')
