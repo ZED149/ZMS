@@ -25,7 +25,10 @@ import os
 import subprocess
 from datetime import datetime
 from .admin import Admin, E_Channel
+from dotenv import load_dotenv
 
+# loading enviournmental varables into our scope
+load_dotenv(dotenv_path='.env')
 
 class MediaManager(Admin):
     """Used in handling media related items.
@@ -45,6 +48,11 @@ class MediaManager(Admin):
     __Mail_Handler = MailHandling()
     __MOVIES_CRAWLING_PATH = None
     __TV_SHOWS_CRAWLING_PATH = None
+
+    # server_email_credentials
+    __SERVER_EMAIL = os.getenv('EMAIL_FROM_USERNAME')           # user_name for the no_reply email
+    __SERVER_PASSWORD = os.getenv("EMAIL_FROM_PASSWORD")        # password for the account
+    __SERVER_EMAIL_SUBJECT = os.getenv('EMAIL_FROM_SUBJECT')    # subject of the server generated email
 
     # utility functions
 
@@ -296,7 +304,9 @@ class MediaManager(Admin):
         
     # private data mambers
     # constructor
-    def __init__(self, verbosity:bool = False, db_name: str = None, logger_name: str = None) -> None:
+    def __init__(self, verbosity:bool = False, db_name: str = None, logger_name: str = None,
+                 a_name: str = None, a_email: str = None, a_password: str = None) -> None:
+        super().__init__(a_name, a_email, a_password)
         # assigning db_name to private data member
         self.__db_name = db_name
         self.__MASTER_PATH_MOVIES = os.getenv("MASTER_PATH_MOVIES")
@@ -831,7 +841,9 @@ CREATE TABLE "movies" (
         self.__logger.write("-------------------------aetd(), DONE-------------------------\n")
  
     # send_emails
-    def send_emails(self, verbose: bool = False, db_name: str = None, movies_list: list = None, tv_shows: TVShow = None) -> bool:
+    def send_emails(self, verbose: bool = False, db_name: str = None, movies_list: list = None, tv_shows: TVShow = None,
+                    sender_mail: str = None, sender_password: str = None, sender_name: str = None,
+                    sender_subject: str = None) -> bool:
         if verbose:
             self.__logger.write("-------------------------SEND EMAILS, send_emails()-------------------------\n")
         for receipent in self.__receipents_emails:
@@ -843,7 +855,9 @@ CREATE TABLE "movies" (
             if verbose:
                 self.__logger.write(f"[SENDING EMAIL]: to {receipent[1].capitalize()} @ {receipent[0]}\n")
             flag = self.__Mail_Handler.send_email(verbose=verbose, logger=self.__logger,
-                                                  message=message, receiver_email=receipent[0])
+                                                  message=message, receiver_email=receipent[0],
+                                                  sender_email=sender_mail, sender_password=sender_password,
+                                                  sender_name=sender_name, email_subject=sender_subject)
             if verbose and flag:    # if verbosity is enabled and email is being sent
                 self.__logger.write(f"[EMAIL SENT]: to {receipent[1].capitalize()} @ {receipent[0]}\n")
             if not flag:    # if verbosity is enabled but the email is not sent due to some reason
@@ -889,7 +903,9 @@ CREATE TABLE "movies" (
         if verbosity:
             self.__logger.write("Tv Show fetched successfully.\n")
             self.__logger.write("Preparing to send emails to the receipents.\n")
-        email_flag = self.send_emails(verbose=verbosity, db_name=self.__db_name, movies_list=movies, tv_shows=tv_shows)
+        email_flag = self.send_emails(verbose=verbosity, db_name=self.__db_name, movies_list=movies, tv_shows=tv_shows,
+                                      sender_mail=self.__SERVER_EMAIL, sender_password=self.__SERVER_PASSWORD,
+                                      sender_name='ZMS', sender_subject=self.__SERVER_EMAIL_SUBJECT)
         # email_flag = True
         if verbosity:
             self.__logger.write(f"EMAIL_FLAG={email_flag}.\n")

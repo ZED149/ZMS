@@ -35,7 +35,9 @@ class MailHandling:
 
     # send_email_core()
     def __send_email_core(cls, receiver: str = None, message: str = None, host: str = None,
-                   port: int = None, context = None) -> None:
+                   port: int = None, context = None, sender_email: str = None,
+                   sender_password: str = None, sender_name: str = None,
+                   email_subject: str = None) -> None:
         """Sends an email to the user containing message.
 
         Args:
@@ -49,8 +51,8 @@ class MailHandling:
         msg['From'] = formataddr((str(Header('ZED', 'utf-8')), cls.__s_FROM))
         msg['To'] = receiver
         # subject ZED Media Server
-        # msg[subject] = self.__s_SUBJECT
-        msg['Subject'] = "Test Mail 55"
+        msg['subject'] = email_subject
+        # msg['Subject'] = "Test Mail 55"
         msg.preamble = "This is a multi-part message in MIME format."
 
         # attaching msgAlternative to the msg
@@ -74,12 +76,14 @@ class MailHandling:
 
         # send email    
         with smtplib.SMTP_SSL(host, port, context=context) as server:
-            server.login(cls.__s_FROM, cls.__s_PASSWORD)
-            server.sendmail(cls.__s_FROM, receiver, msg.as_string())
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, receiver, msg.as_string())
 
     # send_email()
     def send_email(self, verbose: bool = False, logger = None, message: str = None, 
-                   receiver_email: str = None) -> bool:
+                   receiver_email: str = None, sender_email: str = None,
+                   sender_password: str = None, sender_name: str = None,
+                   email_subject: str = None) -> bool:
         """_summary_
 
         Args:
@@ -105,7 +109,9 @@ class MailHandling:
                 logger.write(f"Sending email to ({receiver_email})\n")
             self.__send_email_core(receiver=receiver_email, message=message, 
                             host=self.__host, port=self.__port, 
-                            context=context)
+                            context=context, sender_name=sender_name,
+                            sender_email=sender_email, sender_password=sender_password,
+                            email_subject=email_subject)
             if verbose:
                 logger.write("Email successfully sent.\n")
                 logger.write("-------------------------send_email(), DONE-------------------------\n")

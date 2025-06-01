@@ -325,13 +325,13 @@ class MessageGenerator:
 <body>
   <div class="email-container">
     <div class="header">
-      <img src="https://via.placeholder.com/120x40?text=LOGO" alt="Company Logo" class="logo">
+      <img src="cid:image1" alt="Company Logo" class="logo">
       <h1>Admin Management and Execution Panel</h1>
     </div>
 '''
       message = message + f'''
 <div class="content">
-      <p>Hi {a_name.capitalize()},</p>
+      <p>Hi {a_name},</p>
       <p>An Error occurred during the execution of ZMS automation script.</p>
 
       <div class="section-title">Error: {error.__class__.__name__}</div>
