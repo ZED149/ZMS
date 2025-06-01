@@ -12,7 +12,7 @@ from os import getenv
 from dotenv import load_dotenv
 
 # loading enviournmental variables into our scope
-load_dotenv(dotenv_path='ZMS/.env')
+load_dotenv(dotenv_path='/home/salman/ZMS/media_manager/.env')
 
 class E_Channel(Enum):
     email = 1

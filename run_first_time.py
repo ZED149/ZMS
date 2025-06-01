@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv
 
 # loading enviournmental variables into our scope
-load_dotenv(dotenv_path="media_manager/.env")
+load_dotenv(dotenv_path="/home/salman/ZMS/media_manager/.env")
 
 # GLOBAL Variables
 DB_NAME = os.getenv('DB_NAME')

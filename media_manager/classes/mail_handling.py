@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from os import getenv
 
 # loading enviourmental variables
-load_dotenv(dotenv_path="ZMS/.env")
+load_dotenv(dotenv_path="/home/salman/ZMS/media_manager/.env")
 
 class MailHandling:
     """Performs basic tasks for an email.

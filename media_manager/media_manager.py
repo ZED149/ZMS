@@ -28,7 +28,7 @@ from .admin import Admin, E_Channel
 from dotenv import load_dotenv
 
 # loading enviournmental varables into our scope
-load_dotenv(dotenv_path='.env')
+load_dotenv(dotenv_path='/home/salman/ZMS/media_manager/.env')
 
 class MediaManager(Admin):
     """Used in handling media related items.
