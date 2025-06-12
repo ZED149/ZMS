@@ -5,7 +5,7 @@
 
 
 from enum import Enum
-from ..message_generator import MessageGenerator
+from ..classes.message_generator import MessageGenerator
 from ..classes import MailHandling
 from ..classes import Logging
 from os import getenv

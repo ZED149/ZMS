@@ -4,7 +4,7 @@
 
 import os
 from dotenv import load_dotenv
-from .classes import Movie, TVShow
+from . import Movie, TVShow
 
 # loading our enviournment
 load_dotenv(dotenv_path="/home/salman/ZMS/media_manager/.env")

@@ -6,10 +6,9 @@
 import sqlite3
 import os
 import glob
-from .message_generator import MessageGenerator
+from .classes.message_generator import MessageGenerator
 import pandas as pd
 from dotenv import load_dotenv
-from media_manager.message_generator import MessageGenerator
 from email.utils import formataddr
 import re
 import time
@@ -25,7 +24,7 @@ import os
 import subprocess
 from datetime import datetime
 from .admin import Admin, E_Channel
-from dotenv import load_dotenv
+from classes import MessageGenerator
 
 # loading enviournmental varables into our scope
 load_dotenv(dotenv_path='/home/salman/ZMS/media_manager/.env')
@@ -294,13 +293,6 @@ class MediaManager(Admin):
         if verbose:
             self.__logger.write("-------------------------__ce(), DONE-------------------------\n")
         return message
-    
-        """Sends an email to the receiver's. Receipent(s) are fetched from the DB. In order to add
-        more receipent(s) to the server, use aetd() method.
-
-        Args:
-            message (str, optional): Contains the HTML format of message to be sent. Defaults to None.
-        """
         
     # private data mambers
     # constructor
