@@ -27,7 +27,8 @@ if __name__ == "__main__":
 
     # Instanciating MediaManager object
     o = MediaManager(verbosity=VERBOSITY, db_name=DB_NAME, logger_name="Salman Ahmad",
-                     a_name=ADMIN_NAME, a_email=ADMIN_EMAIL, a_password=ADMIN_PASSWORD)
+                     a_name=ADMIN_NAME, a_email=ADMIN_EMAIL, a_password=ADMIN_PASSWORD,
+                     rft=True)
 
     # setting sending email and commiting to DB flag = False
     flag = False
@@ -43,4 +44,4 @@ if __name__ == "__main__":
     # creating tv_shows table in the DB
     o.ctstid(verbosity=VERBOSITY, db_name=DB_NAME)
 
-    o.commit()
+    o.commit(verbosity=VERBOSITY)
