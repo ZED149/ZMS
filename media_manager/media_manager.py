@@ -24,7 +24,8 @@ import os
 import subprocess
 from datetime import datetime
 from .admin import Admin, E_Channel
-from classes import MessageGenerator
+from .classes import MessageGenerator
+from subprocess import PIPE, Popen
 
 # loading enviournmental varables into our scope
 load_dotenv(dotenv_path='/home/salman/ZMS/media_manager/.env')
@@ -47,6 +48,7 @@ class MediaManager(Admin):
     __Mail_Handler = MailHandling()
     __MOVIES_CRAWLING_PATH = None
     __TV_SHOWS_CRAWLING_PATH = None
+    __SUDO_PASS = None
 
     # server_email_credentials
     __SERVER_EMAIL = os.getenv('EMAIL_FROM_USERNAME')           # user_name for the no_reply email
@@ -82,13 +84,15 @@ class MediaManager(Admin):
         return datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat()
     
     # move_movies_and tv_shows
-    def __move_media(self, verbosity: bool = False, movies_from_path: str = None, tv_shows_from_path: str = None):
+    def __move_media(self, verbosity: bool = False, movies_from_path: str = None, tv_shows_from_path: str = None,
+                     tv_shows: TVShow = None):
         """Move movies and tv_shows from their crawling paths to the Master path.
 
         Args:
             movies_from_path (str, optional): Path from movies are to be moved. Defaults to None.
             tv_shows_from_path (str, optional): Path from where tv_shows are to be moved. Defaults to None.
         """
+        self.__SUDO_PASS = os.getenv("SUDO_PASS")
         if verbosity:
             self.__logger.write("-------------------------Move Media, __move_media()-------------------------\n")
 
@@ -107,23 +111,53 @@ class MediaManager(Admin):
             self.__logger.write("Moving movies DONE.\n")
             self.__logger.write("Moving TV Shows:\n")
         # moving tv_shows
-        for tv_show in os.scandir(path=tv_shows_from_path):
-            if verbosity:
-                self.__logger.write(f"Moving TV_SHOW=({tv_show.path}) TO dst=({self.__MASTER_PATH_TV_SHOWS}).\n")
-            try:    
-                shutil.move(src=tv_show.path, dst=self.__MASTER_PATH_TV_SHOWS, copy_function=shutil.copytree)
-            except shutil.Error:
+        for tv_show in tv_shows:
+            if not tv_show.newly_added:     # if it is an updated show
+                # it means that this tv_show has been already present in the DB.
+                #So, just need to copy the episodes
+                path = self.__TV_SHOWS_CRAWLING_PATH[:-1:]      #   /media/from/tv_shows
+                path = f'{path}/{tv_show.tv_show_name}'         #   /media/from/tvshows/Sher
+                command = f'mv -v {path}/* /media/tv_shows/{tv_show.tv_show_name}/'    #   mv /media/from/tv_shows/Sher/* /media/tv_shows/Sher/
+                p = Popen(['sudo', '-S', 'bash', '-c', command], stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                        universal_newlines=True)
+                stdout, stderr = p.communicate(self.__SUDO_PASS + '\n')
                 if verbosity:
-                    self.__logger.write(f"Tv_Show dst='{self.__MASTER_PATH_TV_SHOWS}' already exists. Copying each episode 1 by 1 now.\n")
-                    # it means that a directory for that tv_show already exists, now we will iterate on that tv_show
-                    # to move each episode 1 by 1
-                    for episode in os.scandir(path=tv_show.path):
-                        if verbosity:
-                            self.__logger.write(f"Moving episode='{episode.path}' to dst='{self.__MASTER_PATH_TV_SHOWS + tv_show.name + '/'}'.\n")
-                        shutil.move(src=episode.path, dst=self.__MASTER_PATH_TV_SHOWS + tv_show.name + '/')
-
+                    self.__logger.write(f"Moving from({path + '/'}) - to(/media/tv_shows/{tv_show.tv_show_name})\n")
+                    self.__logger.write(f"[STDOUT]: {stdout}[STDERR]: {stderr}\n")
+                    print(f"[STDERR]: {stderr}")
+                    print(f"[STDOUT]: {stdout}")
+            else:   # if its a newly added show
+                path = self.__TV_SHOWS_CRAWLING_PATH[:-1:]      #   /media/from/tv_shows
+                path = f'{path}/{tv_show.tv_show_name}'         #   /media/from/tv_shows/Dastak
+                command = f'mv -v {path}/ /media/tv_shows/'       #   mv /media/from/tv_shows/Dastak/ /media/tv_shows/
+                p = Popen(['sudo', '-S', 'bash', '-c', command], stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                        universal_newlines=True)
+                stdout, stderr = p.communicate(self.__SUDO_PASS + '\n')
+                if verbosity:
+                    self.__logger.write(f"Moving from({path + '/'}) - to(/media/tv_shows/)\n")
+                    self.__logger.write(f"[STDOUT]: {stdout}[STDERR]: {stderr}\n")
+                    print(f"[STDERR]: {stderr}")
+                    print(f"[STDOUT]: {stdout}")
         if verbosity:
             self.__logger.write("Moving tv_shows DONE.\n")
+
+        # deleting media from the scraping repo of tv_shows (bcz in case of movie, they don't update, they just add as new)
+        if verbosity:
+            self.__logger.write(f"Deleting media(tv_shows) from path=({tv_shows_from_path})\n")
+            # write delete code here
+            # self.__SUDO_PASS = os.getenv("SUDO_PASS")
+            path = self.__TV_SHOWS_CRAWLING_PATH[:-1:]
+            command = f'rm -rf {path}/*'
+
+            p = Popen(['sudo', '-S', 'bash', '-c', command], stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                    universal_newlines=True)
+            stdout, stderr = p.communicate(self.__SUDO_PASS + '\n')
+            if p.returncode == 0:
+                self.__logger.write(f"Media deleted from {self.__TV_SHOWS_CRAWLING_PATH}.\n")
+            else:
+                print(f"Error deleting media from {self.__TV_SHOWS_CRAWLING_PATH}, {stderr}\n")
+        
+        if verbosity:
             self.__logger.write("-------------------------__move_media(), DONE-------------------------\n")
 
     # scrap_channel_name
@@ -136,6 +170,10 @@ class MediaManager(Admin):
         Returns:
             str: Channel Name.
         """
+        # removing underscores from tv_show name e.g Shehr_e_Zaat ==> Shehr e Zaat
+        tv_show_name = [i for i in tv_show_name.split('_')]
+        tv_show_name = " ".join(tv_show_name)
+        
         if verbose:
             self.__logger.write("-------------------------Scrap Channel Name, __scrap_channel_name()-------------------------\n")
             self.__logger.write("Initializing driver.\n")
@@ -154,7 +192,7 @@ class MediaManager(Admin):
         if verbose:
             self.__logger.write("Scraping channel name.\n")
         # scraping tv channel name for that drama
-        channel = self.__channel_name_scraper_driver.find_element(by='xpath', value='/html/body/ytd-app/div[1]/ytd-page-manager/ytd-search/div[1]/ytd-two-column-search-results-renderer/div/ytd-section-list-renderer/div[2]/ytd-item-section-renderer/div[3]/yt-lockup-view-model[1]/div/div/yt-lockup-metadata-view-model/div[1]/div[1]/yt-content-metadata-view-model/div[1]/span[1]/span/a')
+        channel = self.__channel_name_scraper_driver.find_element(by='xpath', value='/html/body/ytd-app/div[1]/ytd-page-manager/ytd-search/div[1]/ytd-two-column-search-results-renderer/div/ytd-section-list-renderer/div[2]/ytd-item-section-renderer/div[3]/ytd-video-renderer[1]/div[1]/div/div[2]/ytd-channel-name/div/div/yt-formatted-string/a')
         if verbose:
             self.__logger.write(f"[CHANNEL NAME FOR]: {tv_show_name} is ({channel.text}).\n")
             print(f"[CHANNEL NAME FOR]: {tv_show_name} is ({channel.text}).")
@@ -297,13 +335,15 @@ class MediaManager(Admin):
     # private data mambers
     # constructor
     def __init__(self, verbosity:bool = False, db_name: str = None, logger_name: str = None,
-                 a_name: str = None, a_email: str = None, a_password: str = None) -> None:
+                 a_name: str = None, a_email: str = None, a_password: str = None,
+                 rft: bool = None) -> None:
         super().__init__(a_name, a_email, a_password)
         # assigning db_name to private data member
         self.__db_name = db_name
         self.__MASTER_PATH_MOVIES = os.getenv("MASTER_PATH_MOVIES")
         self.__MASTER_PATH_TV_SHOWS = os.getenv("MASTER_PATH_TV_SHOWS")
 
+        self.__SUDO_PASS = os.getenv("SUDO_PASS")
         # initializing Logger
         if logger_name:
             self.__logger = Logging(logger_name=logger_name)
@@ -322,6 +362,20 @@ class MediaManager(Admin):
                 self.__logger.write(f"Connecting to the Database ({db_name}).\n")
             # connecting to the DB
             self.conn = sqlite3.connect(db_name)
+            # no need to fetch customers email data when just creating the DB.
+            # So, exit
+            if rft:     # checking for rft ===> Running for the first time
+                self.__logger.write("New DB successfully created.\n")
+                path = "/home/salman/ZMS/media.db"
+                if verbosity:
+                    self.__logger.write(f"Changing permissions to the 777 of DB({db_name}) along path=({path})\n")
+                command = f'chmod 777 -v {path}'
+                p = Popen(['sudo', '-S', 'bash', '-c', command], stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                        universal_newlines=True)
+                stdout, stderr = p.communicate(self.__SUDO_PASS + '\n')
+                self.__logger.write("Changing permission done.\n")
+                self.__logger.write("-------------------------__init__(), DONE-------------------------\n")
+                return
             if verbosity:
                 self.__logger.write("Acquiring cursor.\n")
             # fetch customer emails here
@@ -336,14 +390,18 @@ class MediaManager(Admin):
                 self.__receipents_emails = cursor.fetchall()
                 if verbosity:
                     self.__logger.write("Query successful.\n")
-                    self.__logger.write("-------------------------__init__(), DONE-------------------------")
-            except:
+                    self.__logger.write("-------------------------__init__(), DONE-------------------------\n")
+            except Exception as excep:
                 if verbosity:
-                    self.__logger.write("-------------------------__init__(), DONE-------------------------")
+                    self.__logger.write("Error while reading receipents emails from the DB. Notifying admin.\n")
+                    self.notify_admin(verbose=verbosity, channel=E_Channel.email, excep=excep, logger=self.__logger)
+                    self.conn.close()
+                    exit(0)
+                    self.__logger.write("-------------------------__init__(), DONE-------------------------\n")
         else:
             self.__logger.write("Connection not successful.\n")
             self.__logger.write("Terminating script.\n")
-            self.__logger.write("-------------------------__init__(), DONE-------------------------")
+            self.__logger.write("-------------------------__init__(), DONE-------------------------\n")
             exit(0)
     
     # Methods
@@ -591,7 +649,7 @@ CREATE TABLE "movies" (
                 a = {}
                 # scraping channel name from web
                 if verbosity:
-                    print(f"[CHANNEL NAME]: --> {e.name}")
+                    print(f"[DRAMA NAME]: --> {e.name}")
                     self.__logger.write(f"Attempting to scrap channel name for the tv_show ({e.name})\n")
                 try:
                     channel_name = self.__scrap_channel_name(verbose=verbosity, tv_show_name=e.name)
@@ -898,18 +956,19 @@ CREATE TABLE "movies" (
         email_flag = self.send_emails(verbose=verbosity, db_name=self.__db_name, movies_list=movies, tv_shows=tv_shows,
                                       sender_mail=self.__SERVER_EMAIL, sender_password=self.__SERVER_PASSWORD,
                                       sender_name='ZMS', sender_subject=self.__SERVER_EMAIL_SUBJECT)
-        # email_flag = True
+        email_flag = True
         if verbosity:
             self.__logger.write(f"EMAIL_FLAG={email_flag}.\n")
         if email_flag:  # if email is sent
             if verbosity:
                 self.__logger.write("Email sent successfully.\nNow commiting changes to the DB.\n")
+            # commiting changes permanentaly to the DB
             self.commit(verbosity=verbosity)
             if verbosity:
                 self.__logger.write("Commiting changes done.\n")
                 self.__logger.write(f"Now, moving movies=({crawling_path_movies}) and tv_shows=({crawling_path_tv_shows}).\n")
             self.__move_media(verbosity=verbosity, movies_from_path=crawling_path_movies, 
-                              tv_shows_from_path=crawling_path_tv_shows)
+                              tv_shows_from_path=crawling_path_tv_shows, tv_shows=tv_shows)
             if verbosity:
                 self.__logger.write("Moving movies and tv_shows successful.\n")
         else:   # if email is not sent
