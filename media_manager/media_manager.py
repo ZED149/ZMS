@@ -956,7 +956,6 @@ CREATE TABLE "movies" (
         email_flag = self.send_emails(verbose=verbosity, db_name=self.__db_name, movies_list=movies, tv_shows=tv_shows,
                                       sender_mail=self.__SERVER_EMAIL, sender_password=self.__SERVER_PASSWORD,
                                       sender_name='ZMS', sender_subject=self.__SERVER_EMAIL_SUBJECT)
-        email_flag = True
         if verbosity:
             self.__logger.write(f"EMAIL_FLAG={email_flag}.\n")
         if email_flag:  # if email is sent
