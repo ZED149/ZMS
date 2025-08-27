@@ -26,6 +26,7 @@ from datetime import datetime
 from .admin import Admin, E_Channel
 from .classes import MessageGenerator
 from subprocess import PIPE, Popen
+from selenium.common.exceptions import SessionNotCreatedException, NoSuchElementException
 
 # loading enviournmental varables into our scope
 load_dotenv(dotenv_path='/home/salman/ZMS/media_manager/.env')
@@ -161,7 +162,7 @@ class MediaManager(Admin):
             self.__logger.write("-------------------------__move_media(), DONE-------------------------\n")
 
     # scrap_channel_name
-    def __scrap_channel_name(self, verbose: bool = False, tv_show_name: str = None) -> str:
+    def __scrap_channel_name(self, verbose: bool = False, tv_show_name: str = None, first_time=False) -> str:
         """Scrap TV Channel name for the given tv show and returns it.
 
         Args:
@@ -184,9 +185,19 @@ class MediaManager(Admin):
             self.__logger.write(f"Making request to the url({url}) and fetching frontend code.\n")
         # making request to the url(youtube.com) and fetching frontend code
         self.__channel_name_scraper_driver.get(url)
+        time.sleep(5)
+        # this case will trigger if Youtube is asking to 'Agree'
+        if first_time:
+            if verbose:
+                self.__logger.write("Accepting Youtube terms.\n")
+            time.sleep(5)
+            self.__channel_name_scraper_driver.find_element(by="xpath", value='//*[@id="content"]/div[2]/div[6]/div[1]/ytd-button-renderer[2]/yt-button-shape/button').send_keys(Keys.ENTER)
+            if verbose:
+                self.__logger.write("Youtube terms accepted successfuly.\n")
         if verbose:
             self.__logger.write(f"Searching for tv_show({tv_show_name}) and sending ENTER keys.\n")
         # searching for drama name (tv_show_name) in the search bar and pressing ENTER
+        time.sleep(5)
         self.__channel_name_scraper_driver.find_element(by="xpath", value='/html/body/ytd-app/div[1]/div[2]/ytd-masthead/div[4]/div[2]/yt-searchbox/div[1]/form/input').send_keys(f"{tv_show_name} drama" + Keys.RETURN)
         time.sleep(5)
         if verbose:
@@ -653,12 +664,50 @@ CREATE TABLE "movies" (
                     self.__logger.write(f"Attempting to scrap channel name for the tv_show ({e.name})\n")
                 try:
                     channel_name = self.__scrap_channel_name(verbose=verbosity, tv_show_name=e.name)
+                except SessionNotCreatedException:
+                    if verbosity:
+                        self.__logger.write("Session is Not Created.\nNeed to update browser(Google Chrome).\n")
+                    # no need to notify admin, just prompt the user to update system
+                    # it means that the version of chromium doesn't matched with the version of webdriver
+                    # need to update the chromium
+                    print("SessionNotCreated.\nNeed to update brower(Google Chrome).\n")
+                    if verbosity:
+                        self.__logger.write("Executing command to update packages.\n")
+                    print("Executing command to update packages.\n")
+                    command = f'sudo apt update'
+                    p = Popen(['sudo', '-S', 'bash', '-c', command], stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                            universal_newlines=True)
+                    stdout, stderr = p.communicate(self.__SUDO_PASS + '\n')
+                    if verbosity:
+                        self.__logger.write("Command executed successfuly.\nNow, executing command to upgrade browser(Googel Chrome).\n")
+                    print("Command executed successfuly.\nNow, executing command to upgrade browser(Googel Chrome).\n")
+                    # executing command to upgrade google chrome
+                    command = "sudo apt install --only-upgrade google-chrome-stable"
+                    p = Popen(['sudo', '-S', 'bash', '-c', command], stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                            universal_newlines=True)
+                    stdout, stderr = p.communicate(self.__SUDO_PASS)
+                    if verbosity:
+                        self.__logger.write("Command executed successfuly.\nClosing the script.\n")
+                        self.conn.close()
+                        self.__logger.write("-------------------------nmtatstd(), DONE-------------------------\n")
+                    print("\nSuccessfully Updated.\nRun script again.\nThanks.\n")
+                    exit(0)
+                except NoSuchElementException:
+                    if verbosity:
+                        self.__logger.write(f"NoSuchElementException occurred.\nRunning scraping channel({e.name}) again with the first_time=true.\n")
+                    # it can be either of two reasons
+                    # 1. Youtube is asking for agreeing
+                    # 2. Or the Youtube has alterted its frontend code and now our script is broken
+                    # This case will only handle the option 1.
+                    # just call the scrap channel function with the first_time=true 
+                    self.__scrap_channel_name(verbose=verbosity, tv_show_name=e.name, first_time=True)
                 except Exception as excep:
                     if verbosity:
                         self.__logger.write("Exception occurred. Exiting program.\nSending details to the admin.")
                     self.notify_admin(verbose=verbosity, channel=E_Channel.email, excep=excep, logger=self.__logger)
                     self.conn.close()
-                    self.__logger.write("-------------------------nmtatstd(), DONE-------------------------\n")
+                    if verbosity:
+                        self.__logger.write("-------------------------nmtatstd(), DONE-------------------------\n")
                     exit(0)
 
                 if verbosity:
@@ -953,21 +1002,22 @@ CREATE TABLE "movies" (
         if verbosity:
             self.__logger.write("Tv Show fetched successfully.\n")
             self.__logger.write("Preparing to send emails to the receipents.\n")
-        email_flag = self.send_emails(verbose=verbosity, db_name=self.__db_name, movies_list=movies, tv_shows=tv_shows,
-                                      sender_mail=self.__SERVER_EMAIL, sender_password=self.__SERVER_PASSWORD,
-                                      sender_name='ZMS', sender_subject=self.__SERVER_EMAIL_SUBJECT)
+        # email_flag = self.send_emails(verbose=verbosity, db_name=self.__db_name, movies_list=movies, tv_shows=tv_shows,
+        #                               sender_mail=self.__SERVER_EMAIL, sender_password=self.__SERVER_PASSWORD,
+        #                               sender_name='ZMS', sender_subject=self.__SERVER_EMAIL_SUBJECT)
+        email_flag = False
         if verbosity:
             self.__logger.write(f"EMAIL_FLAG={email_flag}.\n")
         if email_flag:  # if email is sent
             if verbosity:
                 self.__logger.write("Email sent successfully.\nNow commiting changes to the DB.\n")
             # commiting changes permanentaly to the DB
-            self.commit(verbosity=verbosity)
+            # self.commit(verbosity=verbosity)
             if verbosity:
                 self.__logger.write("Commiting changes done.\n")
                 self.__logger.write(f"Now, moving movies=({crawling_path_movies}) and tv_shows=({crawling_path_tv_shows}).\n")
-            self.__move_media(verbosity=verbosity, movies_from_path=crawling_path_movies, 
-                              tv_shows_from_path=crawling_path_tv_shows, tv_shows=tv_shows)
+            # self.__move_media(verbosity=verbosity, movies_from_path=crawling_path_movies, 
+            #                   tv_shows_from_path=crawling_path_tv_shows, tv_shows=tv_shows)
             if verbosity:
                 self.__logger.write("Moving movies and tv_shows successful.\n")
         else:   # if email is not sent
